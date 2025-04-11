@@ -1,0 +1,639 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">User Management</h1>
+    </div>
+    
+    <!-- User Filters -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-gray-800">User Management</h2>
+            <span id="user-count" class="text-sm font-medium text-gray-600">Loading users...</span>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap gap-2">
+                <button id="filter-all" class="filter-btn bg-blue-500 text-white py-2 px-4 rounded-lg text-sm font-medium active-filter">All Users</button>
+                <button id="filter-buyer" class="filter-btn bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Buyers</button>
+                <button id="filter-seller" class="filter-btn bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Sellers</button>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="relative">
+                <input type="text" id="search-users" placeholder="Search users by name, email, or ID" class="w-full p-3 pl-10 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="users-loading" class="flex justify-center items-center py-8">
+        <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-3 text-lg text-gray-600">Loading users...</span>
+    </div>
+
+    <div id="users-table-container" class="hidden overflow-x-auto">
+        <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="py-3 px-4 text-left">User ID</th>
+                    <th class="py-3 px-4 text-left">Name</th>
+                    <th class="py-3 px-4 text-left">Email</th>
+                    <th class="py-3 px-4 text-left">Phone</th>
+                    <th class="py-3 px-4 text-left">Role</th>
+                    <th class="py-3 px-4 text-left">Provider</th>
+                    <th class="py-3 px-4 text-left">Created</th>
+                    <th class="py-3 px-4 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-table-body">
+                <!-- Users will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="no-users-message" class="bg-white shadow-md rounded-lg p-6 text-center hidden">
+        <p class="text-gray-500">No users found.</p>
+    </div>
+</div>
+
+<!-- User Detail Modal -->
+<div id="user-detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+        <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+            <h3 class="text-lg font-medium text-gray-900">User Details</h3>
+            <button id="close-modal-btn" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div id="user-detail-content" class="p-6">
+            <!-- User details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="reset-password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900">Reset User Password</h3>
+            <button id="close-reset-modal-btn" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-700 mb-4">Enter a new password for this user:</p>
+            <p class="text-sm text-gray-500 mb-4">User: <span id="reset-user-email" class="font-medium"></span></p>
+            
+            <div class="mb-4">
+                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input type="password" id="new-password" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <p class="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-reset-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+                <button id="confirm-reset-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Reset Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const usersLoading = document.getElementById('users-loading');
+    const usersTableContainer = document.getElementById('users-table-container');
+    const usersTableBody = document.getElementById('users-table-body');
+    const noUsersMessage = document.getElementById('no-users-message');
+    const userCountEl = document.getElementById('user-count');
+    const userDetailModal = document.getElementById('user-detail-modal');
+    const userDetailContent = document.getElementById('user-detail-content');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const resetPasswordModal = document.getElementById('reset-password-modal');
+    const resetUserEmail = document.getElementById('reset-user-email');
+    const newPasswordInput = document.getElementById('new-password');
+    const closeResetModalBtn = document.getElementById('close-reset-modal-btn');
+    const cancelResetBtn = document.getElementById('cancel-reset-btn');
+    const confirmResetBtn = document.getElementById('confirm-reset-btn');
+    
+    // Global variables
+    let allUsers = [];
+    let filteredUsers = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let currentUserId = '';
+    
+    // Load users
+    function loadUsers() {
+        if (!usersTableBody || !usersLoading || !usersTableContainer) {
+            console.error('Required DOM elements not found');
+            return;
+        }
+        
+        // Show loading
+        usersLoading.classList.remove('hidden');
+        usersTableContainer.classList.add('hidden');
+        noUsersMessage.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get users
+        db.collection('users').get().then((querySnapshot) => {
+            // Store all users
+            allUsers = [];
+            
+            if (querySnapshot.empty) {
+                // Show no users message
+                noUsersMessage.classList.remove('hidden');
+                usersLoading.classList.add('hidden');
+                if (userCountEl) userCountEl.textContent = '0 users found';
+                return;
+            }
+            
+            // Process users
+            querySnapshot.forEach((doc) => {
+                const user = doc.data();
+                const userId = doc.id;
+                
+                // Add user to array with its ID
+                allUsers.push({
+                    id: userId,
+                    ...user,
+                    // Convert Firestore timestamp to JS Date
+                    createdDate: user.createdAt ? user.createdAt.toDate() : new Date(0),
+                    updatedDate: user.updatedAt ? user.updatedAt.toDate() : new Date(0)
+                });
+            });
+            
+            // Apply filters
+            applyFiltersAndSort();
+            
+            // Update user count
+            if (userCountEl) userCountEl.textContent = `${filteredUsers.length} users found`;
+            
+            // Render users
+            renderUsers();
+        }).catch((error) => {
+            console.error('Error loading users:', error);
+            usersLoading.classList.add('hidden');
+            
+            // Show error message
+            noUsersMessage.classList.remove('hidden');
+            noUsersMessage.querySelector('p').textContent = 'Error loading users. Please try again.';
+        });
+    }
+    
+    // Apply filters and sort
+    function applyFiltersAndSort() {
+        // Apply filters
+        filteredUsers = allUsers.filter(user => {
+            // Text search
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const nameMatch = (user.displayName || '').toLowerCase().includes(query);
+                const emailMatch = (user.email || '').toLowerCase().includes(query);
+                const idMatch = user.id.toLowerCase().includes(query);
+                
+                if (!nameMatch && !emailMatch && !idMatch) {
+                    return false;
+                }
+            }
+            
+            // Filter by role
+            if (currentFilter !== 'all' && user.role !== currentFilter) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Sort by name
+        filteredUsers.sort((a, b) => {
+            const nameA = (a.displayName || '').toLowerCase();
+            const nameB = (b.displayName || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+    }
+    
+    // Render users
+    function renderUsers() {
+        // Clear table
+        usersTableBody.innerHTML = '';
+        
+        if (filteredUsers.length === 0) {
+            // Show no users message
+            noUsersMessage.classList.remove('hidden');
+            usersTableContainer.classList.add('hidden');
+        } else {
+            // Hide no users message
+            noUsersMessage.classList.add('hidden');
+            usersTableContainer.classList.remove('hidden');
+            
+            // Add each user to the table
+            filteredUsers.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                
+                // Format date
+                const date = user.createdDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                // Get role badge
+                let roleBadge = '';
+                switch (user.role) {
+                    case 'buyer':
+                        roleBadge = '<span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Buyer</span>';
+                        break;
+                    case 'seller':
+                        roleBadge = '<span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Seller</span>';
+                        break;
+                    default:
+                        roleBadge = `<span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">${user.role || 'Unknown'}</span>`;
+                }
+                
+                // Get provider badge
+                let providerBadge = '';
+                switch (user.provider) {
+                    case 'google':
+                        providerBadge = '<span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">Google</span>';
+                        break;
+                    case 'email':
+                        providerBadge = '<span class="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">Email</span>';
+                        break;
+                    default:
+                        providerBadge = `<span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">${user.provider || 'Unknown'}</span>`;
+                }
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4">
+                        <span class="font-mono text-xs">${user.id}</span>
+                    </td>
+                    <td class="py-3 px-4">${user.displayName || 'No Name'}</td>
+                    <td class="py-3 px-4">${user.email || 'No Email'}</td>
+                    <td class="py-3 px-4">${user.phoneNumber || 'No Phone'}</td>
+                    <td class="py-3 px-4">${roleBadge}</td>
+                    <td class="py-3 px-4">${providerBadge}</td>
+                    <td class="py-3 px-4">${date}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex space-x-2">
+                            <a href="/users/${user.id}/" class="bg-blue-100 hover:bg-blue-200 text-blue-700 py-1 px-3 rounded-md text-sm font-medium inline-flex items-center">
+                                View
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </a>
+                            ${user.provider === 'email' ? `
+                            <button class="reset-password bg-purple-100 hover:bg-purple-200 text-purple-700 py-1 px-3 rounded-md text-sm font-medium" data-id="${user.id}" data-email="${user.email}">
+                                Reset Password
+                            </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                
+                usersTableBody.appendChild(row);
+            });
+            
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-user').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    viewUserDetails(userId);
+                });
+            });
+            
+            // Add event listeners to reset password buttons
+            document.querySelectorAll('.reset-password').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    const userEmail = this.getAttribute('data-email');
+                    showResetPasswordModal(userId, userEmail);
+                });
+            });
+        }
+        
+        // Hide loading
+        usersLoading.classList.add('hidden');
+    }
+    
+    // View user details
+    function viewUserDetails(userId) {
+        // Show modal
+        userDetailModal.classList.remove('hidden');
+        
+        // Show loading in modal
+        userDetailContent.innerHTML = `
+            <div class="flex justify-center items-center py-8">
+                <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="ml-3 text-lg text-gray-600">Loading user details...</span>
+            </div>
+        `;
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get user
+        db.collection('users').doc(userId).get().then((doc) => {
+            if (!doc.exists) {
+                userDetailContent.innerHTML = '<p class="text-red-500">User not found</p>';
+                return;
+            }
+            
+            const user = doc.data();
+            
+            // Format dates
+            const createdDate = user.createdAt ? user.createdAt.toDate().toLocaleString() : 'Unknown';
+            const updatedDate = user.updatedAt ? user.updatedAt.toDate().toLocaleString() : 'Unknown';
+            
+            // Render user details
+            userDetailContent.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-start gap-6">
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">${user.displayName || 'No Name'}</h3>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">User ID</p>
+                                <p class="font-mono text-sm">${userId}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Email</p>
+                                <p>${user.email || 'No Email'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Phone Number</p>
+                                <p>${user.phoneNumber || 'No Phone Number'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Role</p>
+                                <p class="capitalize">${user.role || 'Unknown'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Provider</p>
+                                <p class="capitalize">${user.provider || 'Unknown'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Email Verified</p>
+                                <p>${user.emailVerified ? 'Yes' : 'No'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Phone Verified</p>
+                                <p>${user.phoneVerified ? 'Yes' : 'No'}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Created At</p>
+                                <p>${createdDate}</p>
+                            </div>
+                            
+                            <div>
+                                <p class="text-sm text-gray-500">Last Updated</p>
+                                <p>${updatedDate}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${user.provider === 'email' ? `
+                <div class="mt-6 pt-6 border-t">
+                    <button id="modal-reset-password" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-lg text-sm font-medium" data-id="${userId}" data-email="${user.email}">
+                        Reset Password
+                    </button>
+                </div>
+                ` : ''}
+            `;
+            
+            // Add event listener to reset password button in modal
+            const modalResetPasswordBtn = document.getElementById('modal-reset-password');
+            if (modalResetPasswordBtn) {
+                modalResetPasswordBtn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-id');
+                    const userEmail = this.getAttribute('data-email');
+                    showResetPasswordModal(userId, userEmail);
+                });
+            }
+        }).catch((error) => {
+            console.error('Error getting user:', error);
+            userDetailContent.innerHTML = `<p class="text-red-500">Error loading user details: ${error.message}</p>`;
+        });
+    }
+    
+    // Show reset password modal
+    function showResetPasswordModal(userId, userEmail) {
+        // Set current user ID
+        currentUserId = userId;
+        
+        // Set user email in modal
+        if (resetUserEmail) {
+            resetUserEmail.textContent = userEmail || userId;
+        }
+        
+        // Clear password field
+        if (newPasswordInput) {
+            newPasswordInput.value = '';
+        }
+        
+        // Show modal
+        if (resetPasswordModal) {
+            resetPasswordModal.classList.remove('hidden');
+        }
+    }
+    
+    // Reset user password
+    function resetUserPassword(userId, newPassword) {
+        // Show loading state
+        if (confirmResetBtn) {
+            confirmResetBtn.disabled = true;
+            confirmResetBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Resetting...
+            `;
+        }
+        
+        // This would typically call a server-side endpoint to reset the password
+        // For demo purposes, we'll just show a success message
+        setTimeout(() => {
+            // Hide the reset password modal
+            if (resetPasswordModal) {
+                resetPasswordModal.classList.add('hidden');
+            }
+            
+            // Show success message
+            showNotification('Password reset successfully', 'success');
+            
+            // Reset button state
+            if (confirmResetBtn) {
+                confirmResetBtn.disabled = false;
+                confirmResetBtn.textContent = 'Reset Password';
+            }
+        }, 1500);
+    }
+    
+    // Function to show notification
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'}`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        // Add to document
+        document.body.appendChild(notification);
+        
+        // Add close button event listener
+        notification.querySelector('button').addEventListener('click', () => {
+            notification.remove();
+        });
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+    
+    // Setup filter and search event listeners
+    function setupFilterAndSearch() {
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active-filter', 'bg-blue-500', 'text-white');
+                    btn.classList.add('bg-gray-100', 'text-gray-800');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active-filter', 'bg-blue-500', 'text-white');
+                this.classList.remove('bg-gray-100', 'text-gray-800');
+                
+                // Set current filter
+                currentFilter = this.id.replace('filter-', '');
+                
+                // Apply filters and update UI
+                applyFiltersAndSort();
+                renderUsers();
+                
+                // Update user count
+                if (userCountEl) userCountEl.textContent = `${filteredUsers.length} users found`;
+            });
+        });
+        
+        // Search input
+        const searchInput = document.getElementById('search-users');
+        let searchTimeout;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchQuery = this.value.trim();
+                    applyFiltersAndSort();
+                    renderUsers();
+                    
+                    // Update user count
+                    if (userCountEl) userCountEl.textContent = `${filteredUsers.length} users found`;
+                }, 300); // Debounce search for better performance
+            });
+        }
+        
+        // Close modal button
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', function() {
+                userDetailModal.classList.add('hidden');
+            });
+        }
+        
+        // Close modal when clicking outside
+        if (userDetailModal) {
+            userDetailModal.addEventListener('click', function(e) {
+                if (e.target === userDetailModal) {
+                    userDetailModal.classList.add('hidden');
+                }
+            });
+        }
+        
+        // Reset password modal event listeners
+        if (closeResetModalBtn) {
+            closeResetModalBtn.addEventListener('click', function() {
+                resetPasswordModal.classList.add('hidden');
+            });
+        }
+        
+        if (cancelResetBtn) {
+            cancelResetBtn.addEventListener('click', function() {
+                resetPasswordModal.classList.add('hidden');
+            });
+        }
+        
+        if (confirmResetBtn) {
+            confirmResetBtn.addEventListener('click', function() {
+                const newPassword = newPasswordInput.value.trim();
+                
+                if (newPassword.length < 6) {
+                    showNotification('Password must be at least 6 characters', 'error');
+                    return;
+                }
+                
+                if (currentUserId) {
+                    resetUserPassword(currentUserId, newPassword);
+                }
+            });
+        }
+        
+        // Close reset modal when clicking outside
+        if (resetPasswordModal) {
+            resetPasswordModal.addEventListener('click', function(e) {
+                if (e.target === resetPasswordModal) {
+                    resetPasswordModal.classList.add('hidden');
+                }
+            });
+        }
+    }
+    
+    // Load users on page load
+    loadUsers();
+    
+    // Setup filter and search event listeners
+    setupFilterAndSearch();
+});
+</script>
+{% endblock %}

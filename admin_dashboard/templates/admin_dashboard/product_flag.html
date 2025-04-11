@@ -1,0 +1,357 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Flag Product{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Flag Product</h1>
+        <a href="{% url 'admin_dashboard:product_detail' product_id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            Back to Product
+        </a>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-container" class="flex justify-center items-center py-12">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-lg text-gray-600">Loading product details...</span>
+    </div>
+    
+    <!-- Error State -->
+    <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline" id="error-message">Unable to load product details.</span>
+        <button id="retry-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg">
+            Retry
+        </button>
+    </div>
+    
+    <!-- Flag Form -->
+    <div id="flag-container" class="hidden">
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+            <div class="p-6">
+                <div class="flex items-start mb-6">
+                    <div class="mr-4">
+                        <img id="product-image" src="{% static 'img/placeholder.svg' %}" alt="Product" class="w-24 h-24 object-cover rounded">
+                    </div>
+                    <div>
+                        <h2 id="product-name" class="text-xl font-bold text-gray-800 mb-1">Loading...</h2>
+                        <p id="product-seller" class="text-sm text-gray-600 mb-2">Seller: Unknown</p>
+                        <div class="flex items-center">
+                            <span id="product-price" class="text-lg font-semibold text-gray-900 mr-3">ETB 0</span>
+                            <span id="product-status" class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Status: Active</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold mb-4">Flag Product Issues</h3>
+                    <p class="text-sm text-gray-600 mb-4">Check all issues that need to be fixed:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-image" class="mr-3">
+                            <label for="flag-image" class="text-gray-700">Image Quality Issues</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-description" class="mr-3">
+                            <label for="flag-description" class="text-gray-700">Inadequate Description</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-category" class="mr-3">
+                            <label for="flag-category" class="text-gray-700">Wrong Category/Subcategory</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-price" class="mr-3">
+                            <label for="flag-price" class="text-gray-700">Pricing Issues</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-shipping" class="mr-3">
+                            <label for="flag-shipping" class="text-gray-700">Missing Shipping Info</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-brand" class="mr-3">
+                            <label for="flag-brand" class="text-gray-700">Missing Brand/Origin</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-policy" class="mr-3">
+                            <label for="flag-policy" class="text-gray-700">Unclear Return Policy</label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-inappropriate" class="mr-3">
+                            <label for="flag-inappropriate" class="text-gray-700">Inappropriate Content</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label for="flag-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes for Seller</label>
+                        <textarea id="flag-notes" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Explain what needs to be fixed..."></textarea>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="flag-deactivate" class="mr-3">
+                            <label for="flag-deactivate" class="text-red-700 font-medium">Deactivate product until issues are fixed</label>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1 ml-6">If checked, the product will be hidden from customers until the seller fixes the issues.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-4">
+                <button id="cancel-button" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg">
+                    Cancel
+                </button>
+                <button id="flag-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" />
+                    </svg>
+                    Flag Product
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Message -->
+    <div id="success-container" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Success!</strong>
+        <span class="block sm:inline" id="success-message">Product has been flagged and notification sent to seller.</span>
+        <div class="mt-4">
+            <a href="{% url 'admin_dashboard:product_list' %}" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg inline-block">
+                Back to Products
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get product ID from Django template context
+    const productId = "{{ product_id }}";
+    console.log("Product ID from template:", productId);
+    
+    // Get DOM elements
+    const loadingContainer = document.getElementById('loading-container');
+    const errorContainer = document.getElementById('error-container');
+    const flagContainer = document.getElementById('flag-container');
+    const successContainer = document.getElementById('success-container');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+    const retryButton = document.getElementById('retry-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const flagButton = document.getElementById('flag-button');
+    
+    // Load product details
+    function loadProductDetails() {
+        // Show loading, hide other containers
+        loadingContainer.classList.remove('hidden');
+        flagContainer.classList.add('hidden');
+        errorContainer.classList.add('hidden');
+        successContainer.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        console.log("Attempting to fetch product with ID:", productId);
+        
+        // Validate product ID
+        if (!productId || productId === "") {
+            console.error("Empty product ID:", productId);
+            errorMessage.textContent = 'Invalid product ID. Please go back and try again.';
+            loadingContainer.classList.add('hidden');
+            errorContainer.classList.remove('hidden');
+            return;
+        }
+        
+        // Get product
+        db.collection('products').doc(productId).get().then((doc) => {
+            // Hide loading
+            loadingContainer.classList.add('hidden');
+            
+            if (doc.exists) {
+                const product = doc.data();
+                console.log("Product data:", product);
+                
+                // Set product details
+                document.getElementById('product-name').textContent = product.name || 'Unnamed Product';
+                document.getElementById('product-seller').textContent = `Seller ID: ${product.sellerId || 'Unknown'}`;
+                
+                // Set price with ETB currency
+                const formattedPrice = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'ETB',
+                    minimumFractionDigits: 0
+                }).format(product.price || 0);
+                document.getElementById('product-price').textContent = formattedPrice;
+                
+                // Set product status
+                const statusEl = document.getElementById('product-status');
+                if (product.status) {
+                    statusEl.textContent = `Status: ${product.status}`;
+                    
+                    // Set status color
+                    if (product.status === 'Active') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-green-100 text-green-800';
+                    } else if (product.status === 'Flagged') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800';
+                    } else if (product.status === 'Inactive') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-red-100 text-red-800';
+                    }
+                }
+                
+                // Set product image
+                const productImage = document.getElementById('product-image');
+                productImage.src = product.imageUrl || '{% static "img/placeholder.svg" %}';
+                productImage.alt = product.name || 'Product';
+                
+                // Show flag container
+                flagContainer.classList.remove('hidden');
+            } else {
+                // Product not found
+                errorMessage.textContent = 'Product not found.';
+                errorContainer.classList.remove('hidden');
+            }
+        }).catch((error) => {
+            console.error("Error getting product:", error);
+            errorMessage.textContent = 'Error loading product details. Please try again.';
+            errorContainer.classList.remove('hidden');
+        });
+    }
+    
+    // Flag product and send notification to seller
+    function flagProduct() {
+        // Get selected issues
+        const issues = [];
+        if (document.getElementById('flag-image').checked) issues.push('Image Quality Issues');
+        if (document.getElementById('flag-description').checked) issues.push('Inadequate Description');
+        if (document.getElementById('flag-category').checked) issues.push('Wrong Category/Subcategory');
+        if (document.getElementById('flag-price').checked) issues.push('Pricing Issues');
+        if (document.getElementById('flag-shipping').checked) issues.push('Missing Shipping Info');
+        if (document.getElementById('flag-brand').checked) issues.push('Missing Brand/Origin');
+        if (document.getElementById('flag-policy').checked) issues.push('Unclear Return Policy');
+        if (document.getElementById('flag-inappropriate').checked) issues.push('Inappropriate Content');
+        
+        // Get notes
+        const notes = document.getElementById('flag-notes').value;
+        
+        // Check if product should be deactivated
+        const deactivate = document.getElementById('flag-deactivate').checked;
+        
+        // Validate at least one issue is selected
+        if (issues.length === 0) {
+            alert('Please select at least one issue to flag.');
+            return;
+        }
+        
+        // Show loading
+        loadingContainer.classList.remove('hidden');
+        flagContainer.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get product and seller ID
+        db.collection('products').doc(productId).get().then((doc) => {
+            if (doc.exists) {
+                const product = doc.data();
+                const sellerId = product.sellerId;
+                
+                if (!sellerId) {
+                    throw new Error('Seller ID not found for this product');
+                }
+                
+                // Create flag object
+                const flag = {
+                    productId: productId,
+                    productName: product.name || 'Unnamed Product',
+                    sellerId: sellerId,
+                    issues: issues,
+                    notes: notes,
+                    deactivated: deactivate,
+                    status: 'open',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: 'admin'
+                };
+                
+                // Add flag to database
+                return db.collection('product_flags').add(flag).then(() => {
+                    // Create notification for seller
+                    const notification = {
+                        type: 'product_flag',
+                        sellerId: sellerId,
+                        productId: productId,
+                        productName: product.name || 'Unnamed Product',
+                        message: `Your product "${product.name || 'Unnamed Product'}" has been flagged for issues that need to be fixed.`,
+                        issues: issues,
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    // Add notification
+                    return db.collection('notifications').add(notification).then(() => {
+                        // Update product status if deactivated
+                        if (deactivate) {
+                            return db.collection('products').doc(productId).update({
+                                status: 'Flagged',
+                                inStock: false,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        } else {
+                            return db.collection('products').doc(productId).update({
+                                status: 'Flagged',
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    });
+                });
+            } else {
+                throw new Error('Product not found');
+            }
+        }).then(() => {
+            // Show success message
+            loadingContainer.classList.add('hidden');
+            
+            // Update success message based on deactivation status
+            if (document.getElementById('flag-deactivate').checked) {
+                successMessage.textContent = 'Product has been flagged, deactivated, and notification sent to seller.';
+            } else {
+                successMessage.textContent = 'Product has been flagged and notification sent to seller.';
+            }
+            
+            successContainer.classList.remove('hidden');
+        }).catch((error) => {
+            console.error("Error flagging product:", error);
+            errorMessage.textContent = 'Error flagging product. Please try again.';
+            loadingContainer.classList.add('hidden');
+            errorContainer.classList.remove('hidden');
+        });
+    }
+    
+    // Event listeners
+    retryButton.addEventListener('click', loadProductDetails);
+    
+    cancelButton.addEventListener('click', function() {
+        window.location.href = `/products/${productId}/`;
+    });
+    
+    flagButton.addEventListener('click', flagProduct);
+    
+    // Load product details when the page loads
+    loadProductDetails();
+});
+</script>
+{% endblock %}

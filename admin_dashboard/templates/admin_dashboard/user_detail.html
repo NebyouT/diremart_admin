@@ -1,0 +1,824 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}User Details{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">User Details</h1>
+        <a href="{% url 'admin_dashboard:user_list' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Users
+        </a>
+    </div>
+
+    <div id="user-loading" class="flex justify-center items-center py-8">
+        <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-3 text-lg text-gray-600">Loading user details...</span>
+    </div>
+
+    <div id="user-detail-container" class="hidden">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Basic Information -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Basic Information</h2>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">User ID</p>
+                                <p id="user-id" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Name</p>
+                                <p id="user-name" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Email</p>
+                                <p id="user-email" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Phone</p>
+                                <p id="user-phone" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Role</p>
+                                <p id="user-role" class="font-medium"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Account Information</h2>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">Created</p>
+                                <p id="user-created" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Last Sign In</p>
+                                <p id="user-last-signin" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Provider</p>
+                                <p id="user-provider" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Email Verified</p>
+                                <p id="user-email-verified" class="font-medium"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <button id="reset-password-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                        Reset Password
+                    </button>
+                    <button id="disable-user-btn" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center hidden">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                        </svg>
+                        Disable Account
+                    </button>
+                    <button id="enable-user-btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center hidden">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Enable Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Activity Section -->
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">User Activity</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Orders -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-800">Recent Orders</h3>
+                    </div>
+                    <div id="user-orders-loading" class="flex justify-center items-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="[http://www.w3.org/2000/svg"](http://www.w3.org/2000/svg") fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Loading orders...</span>
+                    </div>
+                    <div id="user-orders-container" class="hidden">
+                        <div id="user-orders-list" class="divide-y divide-gray-200">
+                            <!-- Orders will be loaded here -->
+                        </div>
+                        <div id="no-orders-message" class="p-6 text-center hidden">
+                            <p class="text-gray-500">No orders found for this user.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products (for sellers) -->
+                <div id="user-products-section" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-800">Products Listed</h3>
+                    </div>
+                    <div id="user-products-loading" class="flex justify-center items-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="[http://www.w3.org/2000/svg"](http://www.w3.org/2000/svg") fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Loading products...</span>
+                    </div>
+                    <div id="user-products-container" class="hidden">
+                        <div id="user-products-list" class="divide-y divide-gray-200">
+                            <!-- Products will be loaded here -->
+                        </div>
+                        <div id="no-products-message" class="p-6 text-center hidden">
+                            <p class="text-gray-500">No products found for this seller.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="no-user-message" class="bg-white shadow-md rounded-lg p-6 text-center hidden">
+        <p class="text-gray-500">User not found.</p>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="reset-password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-900">Reset User Password</h3>
+            <button id="close-reset-modal-btn" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" xmlns="[http://www.w3.org/2000/svg"](http://www.w3.org/2000/svg") fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-700 mb-4">Enter a new password for this user:</p>
+            <p class="text-sm text-gray-500 mb-4">User: <span id="reset-user-email" class="font-medium"></span></p>
+            
+            <div class="mb-4">
+                <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input type="password" id="new-password" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <p class="text-xs text-gray-500 mt-1">Password must be at least 6 characters long.</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-reset-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+                <button id="confirm-reset-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Reset Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification container -->
+<div id="notification-container" class="fixed bottom-4 right-4 z-50"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const userLoading = document.getElementById('user-loading');
+    const userDetailContainer = document.getElementById('user-detail-container');
+    const noUserMessage = document.getElementById('no-user-message');
+    
+    // User details elements
+    const userIdEl = document.getElementById('user-id');
+    const userNameEl = document.getElementById('user-name');
+    const userEmailEl = document.getElementById('user-email');
+    const userPhoneEl = document.getElementById('user-phone');
+    const userRoleEl = document.getElementById('user-role');
+    const userCreatedEl = document.getElementById('user-created');
+    const userLastSignInEl = document.getElementById('user-last-signin');
+    const userProviderEl = document.getElementById('user-provider');
+    const userEmailVerifiedEl = document.getElementById('user-email-verified');
+    
+    // Action buttons
+    const resetPasswordBtn = document.getElementById('reset-password-btn');
+    const disableUserBtn = document.getElementById('disable-user-btn');
+    const enableUserBtn = document.getElementById('enable-user-btn');
+    
+    // Order elements
+    const userOrdersLoading = document.getElementById('user-orders-loading');
+    const userOrdersContainer = document.getElementById('user-orders-container');
+    const userOrdersList = document.getElementById('user-orders-list');
+    const noOrdersMessage = document.getElementById('no-orders-message');
+    
+    // Product elements (for sellers)
+    const userProductsSection = document.getElementById('user-products-section');
+    const userProductsLoading = document.getElementById('user-products-loading');
+    const userProductsContainer = document.getElementById('user-products-container');
+    const userProductsList = document.getElementById('user-products-list');
+    const noProductsMessage = document.getElementById('no-products-message');
+    
+    // Reset password modal elements
+    const resetPasswordModal = document.getElementById('reset-password-modal');
+    const closeResetModalBtn = document.getElementById('close-reset-modal-btn');
+    const resetUserEmailEl = document.getElementById('reset-user-email');
+    const newPasswordInput = document.getElementById('new-password');
+    const cancelResetBtn = document.getElementById('cancel-reset-btn');
+    const confirmResetBtn = document.getElementById('confirm-reset-btn');
+    
+    // Get user ID from URL
+    const userId = '{{ user_id }}';
+    let userData = null;
+    
+    // Load user data
+    function loadUserData() {
+        // Show loading
+        userLoading.classList.remove('hidden');
+        userDetailContainer.classList.add('hidden');
+        noUserMessage.classList.add('hidden');
+        
+        // Get the user data directly from Firestore
+        const db = firebase.firestore();
+        db.collection('users').doc(userId).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    data.uid = doc.id; // Add the document ID as uid
+                    userData = data;
+                    renderUserDetails(data);
+                    loadUserOrders();
+                    
+                    // If user is a seller, load their products
+                    if (data.role === 'seller') {
+                        userProductsSection.classList.remove('hidden');
+                        loadUserProducts();
+                    }
+                } else {
+                    throw new Error('User not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading user:', error);
+                userLoading.classList.add('hidden');
+                noUserMessage.classList.remove('hidden');
+            });
+    }
+    
+    // Render user details
+    function renderUserDetails(user) {
+        // Hide loading, show details
+        userLoading.classList.add('hidden');
+        userDetailContainer.classList.remove('hidden');
+        
+        // Set user details
+        userIdEl.textContent = user.uid || 'N/A';
+        userNameEl.textContent = user.displayName || 'N/A';
+        userEmailEl.textContent = user.email || 'N/A';
+        userPhoneEl.textContent = user.phoneNumber || 'N/A';
+        userRoleEl.textContent = (user.role || 'buyer').charAt(0).toUpperCase() + (user.role || 'buyer').slice(1);
+        
+        // Format dates
+        const createdDate = user.metadata?.creationTime ? new Date(user.metadata.creationTime) : null;
+        const lastSignInDate = user.metadata?.lastSignInTime ? new Date(user.metadata.lastSignInTime) : null;
+        
+        userCreatedEl.textContent = createdDate ? createdDate.toLocaleString() : 'N/A';
+        userLastSignInEl.textContent = lastSignInDate ? lastSignInDate.toLocaleString() : 'N/A';
+        
+        // Other account details
+        userProviderEl.textContent = (user.providerData && user.providerData.length > 0) 
+            ? user.providerData[0].providerId.replace('.com', '') 
+            : 'N/A';
+        
+        userEmailVerifiedEl.textContent = user.emailVerified ? 'Yes' : 'No';
+        
+        // Show/hide appropriate action buttons
+        if (user.disabled) {
+            disableUserBtn.classList.add('hidden');
+            enableUserBtn.classList.remove('hidden');
+        } else {
+            disableUserBtn.classList.remove('hidden');
+            enableUserBtn.classList.add('hidden');
+        }
+    }
+    
+    // Load user orders
+    function loadUserOrders() {
+        userOrdersLoading.classList.remove('hidden');
+        userOrdersContainer.classList.add('hidden');
+        
+        const db = firebase.firestore();
+        
+        // Try different possible field names for user ID in orders collection
+        console.log('Attempting to load orders for user ID:', userId);
+        
+        // First try with user_id field
+        db.collection('orders')
+            .get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    console.log('Found orders with user_id field:', snapshot.size);
+                    renderOrders(snapshot);
+                } else {
+                    console.log('No orders found with user_id field, trying buyerId');
+                    // Try with buyerId field
+                    return db.collection('orders')
+                        .where('buyerId', '==', userId)
+                        .get();
+                }
+            })
+            .then(snapshot => {
+                if (snapshot && !snapshot.empty) {
+                    console.log('Found orders with buyerId field:', snapshot.size);
+                    renderOrders(snapshot);
+                } else if (snapshot) {
+                    console.log('No orders found with buyerId field, trying buyer_id');
+                    // Try with buyer_id field
+                    return db.collection('orders')
+                        .where('buyer_id', '==', userId)
+                        .get();
+                }
+            })
+            .then(snapshot => {
+                if (snapshot && !snapshot.empty) {
+                    console.log('Found orders with buyer_id field:', snapshot.size);
+                    renderOrders(snapshot);
+                } else if (snapshot) {
+                    console.log('No orders found with any user ID field');
+                    userOrdersLoading.classList.add('hidden');
+                    userOrdersContainer.classList.remove('hidden');
+                    noOrdersMessage.classList.remove('hidden');
+                    
+                    // Debug: List a few orders from the collection to see their structure
+                    db.collection('orders').limit(3).get().then(debugSnapshot => {
+                        console.log('Debug - Sample orders from collection:');
+                        debugSnapshot.forEach(doc => {
+                            console.log('Order ID:', doc.id, 'Data:', doc.data());
+                        });
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading orders:', error);
+                userOrdersLoading.classList.add('hidden');
+                userOrdersContainer.classList.remove('hidden');
+                noOrdersMessage.classList.remove('hidden');
+            });
+    
+    // Render orders from a snapshot
+    function renderOrders(snapshot) {
+        userOrdersLoading.classList.add('hidden');
+        userOrdersContainer.classList.remove('hidden');
+        
+        // Render orders
+        userOrdersList.innerHTML = '';
+        const orders = [];
+        snapshot.forEach(doc => {
+            const order = doc.data();
+            order.id = doc.id;
+            orders.push(order);
+        });
+        
+        console.log('Processing orders:', orders);
+        
+        if (orders.length === 0) {
+            noOrdersMessage.classList.remove('hidden');
+            return;
+        }
+        
+        // Sort orders by created_at in descending order if available
+        orders.sort((a, b) => {
+            // Try different date field names
+            const dateFieldNames = ['created_at', 'createdAt', 'date', 'timestamp', 'orderDate'];
+            
+            let dateA, dateB;
+            
+            for (const fieldName of dateFieldNames) {
+                if (a[fieldName]) {
+                    dateA = a[fieldName];
+                    break;
+                }
+            }
+            
+            for (const fieldName of dateFieldNames) {
+                if (b[fieldName]) {
+                    dateB = b[fieldName];
+                    break;
+                }
+            }
+            
+            // Convert to Date objects if they are Firestore timestamps
+            if (dateA && dateA.toDate) dateA = dateA.toDate();
+            if (dateB && dateB.toDate) dateB = dateB.toDate();
+            
+            // Convert to Date objects if they are strings
+            if (dateA && typeof dateA === 'string') dateA = new Date(dateA);
+            if (dateB && typeof dateB === 'string') dateB = new Date(dateB);
+            
+            // Default dates if not found
+            if (!dateA) dateA = new Date(0);
+            if (!dateB) dateB = new Date(0);
+            
+            return dateB - dateA; // Descending order
+        });
+        
+        // Display only first 5 orders
+        orders.slice(0, 5).forEach(order => {
+            // Try different date field names
+            let orderDate = new Date();
+            const dateFieldNames = ['created_at', 'createdAt', 'date', 'timestamp', 'orderDate'];
+            
+            for (const fieldName of dateFieldNames) {
+                if (order[fieldName]) {
+                    if (order[fieldName].toDate) {
+                        orderDate = new Date(order[fieldName].toDate());
+                    } else if (typeof order[fieldName] === 'string') {
+                        orderDate = new Date(order[fieldName]);
+                    } else if (order[fieldName] instanceof Date) {
+                        orderDate = order[fieldName];
+                    }
+                    break;
+                }
+            }
+            
+            // Try different total amount field names
+            let totalAmount = 0;
+            const amountFieldNames = ['total_amount', 'totalAmount', 'total', 'amount', 'price'];
+            
+            for (const fieldName of amountFieldNames) {
+                if (order[fieldName] !== undefined) {
+                    totalAmount = order[fieldName];
+                    break;
+                }
+            }
+            
+            // Try different status field names
+            let status = 'Pending';
+            const statusFieldNames = ['status', 'orderStatus', 'state'];
+            
+            for (const fieldName of statusFieldNames) {
+                if (order[fieldName]) {
+                    status = order[fieldName];
+                    break;
+                }
+            }
+            
+            const orderItem = document.createElement('div');
+            orderItem.className = 'p-4';
+            orderItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-medium">#${order.id}</p>
+                        <p class="text-sm text-gray-500">${orderDate.toLocaleDateString()}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-medium">$${(parseFloat(totalAmount) || 0).toFixed(2)}</p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(status)}">
+                            ${status}
+                        </span>
+                    </div>
+                </div>
+            `;
+            userOrdersList.appendChild(orderItem);
+        });
+        
+        // Add view all link if there are more than 5 orders
+        if (orders.length > 5) {
+            const viewAllLink = document.createElement('div');
+            viewAllLink.className = 'p-4 text-center border-t';
+            viewAllLink.innerHTML = `
+                <a href="{% url 'admin_dashboard:order_list' %}?user=${userId}" class="text-blue-500 hover:text-blue-600 text-sm font-medium">
+                    View all orders (${orders.length})
+                </a>
+            `;
+            userOrdersList.appendChild(viewAllLink);
+        }
+    }
+    
+    // Load user products (for sellers)
+    function loadUserProducts() {
+        userProductsLoading.classList.remove('hidden');
+        userProductsContainer.classList.add('hidden');
+        
+        const db = firebase.firestore();
+        console.log('Attempting to load products for seller ID:', userId);
+        
+        // Try different possible field names for seller ID in products collection
+        db.collection('products')
+            .where('seller_id', '==', userId)
+            .get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    console.log('Found products with seller_id field:', snapshot.size);
+                    renderProducts(snapshot);
+                } else {
+                    console.log('No products found with seller_id field, trying sellerId');
+                    // Try with sellerId field
+                    return db.collection('products')
+                        .where('sellerId', '==', userId)
+                        .get();
+                }
+            })
+            .then(snapshot => {
+                if (snapshot && !snapshot.empty) {
+                    console.log('Found products with sellerId field:', snapshot.size);
+                    renderProducts(snapshot);
+                } else if (snapshot) {
+                    console.log('No products found with sellerId field, trying userId');
+                    // Try with userId field
+                    return db.collection('products')
+                        .where('userId', '==', userId)
+                        .get();
+                }
+            })
+            .then(snapshot => {
+                if (snapshot && !snapshot.empty) {
+                    console.log('Found products with userId field:', snapshot.size);
+                    renderProducts(snapshot);
+                } else if (snapshot) {
+                    console.log('No products found with any seller ID field');
+                    userProductsLoading.classList.add('hidden');
+                    userProductsContainer.classList.remove('hidden');
+                    noProductsMessage.classList.remove('hidden');
+                    
+                    // Debug: List a few products from the collection to see their structure
+                    db.collection('products').limit(3).get().then(debugSnapshot => {
+                        console.log('Debug - Sample products from collection:');
+                        debugSnapshot.forEach(doc => {
+                            console.log('Product ID:', doc.id, 'Data:', doc.data());
+                        });
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading products:', error);
+                userProductsLoading.classList.add('hidden');
+                userProductsContainer.classList.remove('hidden');
+                noProductsMessage.classList.remove('hidden');
+            });
+    }
+    
+    // Render products from a snapshot
+    function renderProducts(snapshot) {
+        userProductsLoading.classList.add('hidden');
+        userProductsContainer.classList.remove('hidden');
+        
+        // Render products
+        userProductsList.innerHTML = '';
+        const products = [];
+        snapshot.forEach(doc => {
+            const product = doc.data();
+            product.id = doc.id;
+            products.push(product);
+        });
+        
+        console.log('Processing products:', products);
+        
+        if (products.length === 0) {
+            noProductsMessage.classList.remove('hidden');
+            return;
+        }
+        
+        // Display only first 5 products
+        products.slice(0, 5).forEach(product => {
+            // Try different field names for product properties
+            let name = product.name || product.title || product.productName || 'Unnamed Product';
+            let category = product.category || product.productCategory || 'Uncategorized';
+            let price = product.price || product.productPrice || 0;
+            let stockQuantity = product.stock_quantity || product.stockQuantity || product.stock || 0;
+            let imageUrl = product.image_url || product.imageUrl || product.image || product.thumbnail || '';
+            
+            const productItem = document.createElement('div');
+            productItem.className = 'p-4';
+            productItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gray-200 rounded-md overflow-hidden mr-3">
+                            ${imageUrl ? `<img src="${imageUrl}" alt="${name}" class="w-full h-full object-cover">` : ''}
+                        </div>
+                        <div>
+                            <p class="font-medium">${name}</p>
+                            <p class="text-sm text-gray-500">${category}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-medium">$${(parseFloat(price) || 0).toFixed(2)}</p>
+                        <p class="text-sm text-gray-500">Stock: ${stockQuantity}</p>
+                    </div>
+                </div>
+            `;
+            userProductsList.appendChild(productItem);
+        });
+        
+        // Add view all link if there are more than 5 products
+        if (products.length > 5) {
+            const viewAllLink = document.createElement('div');
+            viewAllLink.className = 'p-4 text-center border-t';
+            viewAllLink.innerHTML = `
+                <a href="{% url 'admin_dashboard:product_list' %}?seller=${userId}" class="text-blue-500 hover:text-blue-600 text-sm font-medium">
+                    View all products (${products.length})
+                </a>
+            `;
+            userProductsList.appendChild(viewAllLink);
+        }
+    }
+    
+    // Reset password
+    function resetUserPassword(userId, newPassword) {
+        // Send the request to reset password
+        fetch('/admin/reset-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ 
+                userId: userId,
+                newPassword: newPassword 
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to reset password');
+            }
+            return response.json();
+        })
+        .then(data => {
+            resetPasswordModal.classList.add('hidden');
+            showNotification('Password reset successfully', 'success');
+            newPasswordInput.value = '';
+        })
+        .catch(error => {
+            console.error('Error resetting password:', error);
+            showNotification('Failed to reset password: ' + error.message, 'error');
+        });
+    }
+    
+    // Show reset password modal
+    function showResetPasswordModal() {
+        resetUserEmailEl.textContent = userData.email || '';
+        resetPasswordModal.classList.remove('hidden');
+        newPasswordInput.value = '';
+        newPasswordInput.focus();
+    }
+    
+    // Helper function to get status class
+    function getStatusClass(status) {
+        switch (status.toLowerCase()) {
+            case 'completed':
+                return 'bg-green-100 text-green-800';
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'cancelled':
+                return 'bg-red-100 text-red-800';
+            case 'processing':
+                return 'bg-blue-100 text-blue-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notificationContainer = document.getElementById('notification-container');
+        
+        const notification = document.createElement('div');
+        notification.className = `mb-3 p-4 rounded-lg shadow-lg flex items-center ${
+            type === 'success' ? 'bg-green-50 text-green-800 border-l-4 border-green-500' :
+            type === 'error' ? 'bg-red-50 text-red-800 border-l-4 border-red-500' :
+            'bg-blue-50 text-blue-800 border-l-4 border-blue-500'
+        }`;
+        
+        notification.innerHTML = `
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg">](http://www.w3.org/2000/svg">)
+                ${type === 'success' 
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>' 
+                    : type === 'error'
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+                }
+            </svg>
+            <span>${message}</span>
+        `;
+        
+        notificationContainer.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+    
+    // Get CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    // Event listeners
+    if (resetPasswordBtn) {
+        resetPasswordBtn.addEventListener('click', showResetPasswordModal);
+    }
+    
+    if (closeResetModalBtn) {
+        closeResetModalBtn.addEventListener('click', function() {
+            resetPasswordModal.classList.add('hidden');
+        });
+    }
+    
+    if (cancelResetBtn) {
+        cancelResetBtn.addEventListener('click', function() {
+            resetPasswordModal.classList.add('hidden');
+        });
+    }
+    
+    if (confirmResetBtn) {
+        confirmResetBtn.addEventListener('click', function() {
+            const newPassword = newPasswordInput.value.trim();
+            
+            if (newPassword.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            resetUserPassword(userId, newPassword);
+        });
+    }
+    
+    // Close reset modal when clicking outside
+    if (resetPasswordModal) {
+        resetPasswordModal.addEventListener('click', function(e) {
+            if (e.target === resetPasswordModal) {
+                resetPasswordModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Disable/Enable user
+    if (disableUserBtn) {
+        disableUserBtn.addEventListener('click', function() {
+            if (confirm(`Are you sure you want to disable ${userData.email}?`)) {
+                fetch('/admin/disable-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ userId: userId })
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to disable user');
+                    return response.json();
+                })
+                .then(data => {
+                    showNotification('User disabled successfully', 'success');
+                    disableUserBtn.classList.add('hidden');
+                    enableUserBtn.classList.remove('hidden');
+                    userData.disabled = true;
+                })
+                .catch(error => {
+                    console.error('Error disabling user:', error);
+                    showNotification('Failed to disable user', 'error');
+                });
+            }
+        });
+    }
+    
+    if (enableUserBtn) {
+        enableUserBtn.addEventListener('click', function() {
+            fetch('/admin/enable-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to enable user');
+                return response.json();
+            })
+            .then(data => {
+                showNotification('User enabled successfully', 'success');
+                enableUserBtn.classList.add('hidden');
+                disableUserBtn.classList.remove('hidden');
+                userData.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error enabling user:', error);
+                showNotification('Failed to enable user', 'error');
+            });
+        });
+    }
+    
+    // Load user data on page load
+    loadUserData();
+});
+</script>
+{% endblock %}

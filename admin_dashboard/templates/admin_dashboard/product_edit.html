@@ -1,0 +1,357 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Edit Product{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Edit Product</h1>
+        <a href="{% url 'admin_dashboard:product_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg">
+            Back to Products
+        </a>
+    </div>
+    
+    <div id="product-loading" class="flex justify-center items-center py-12">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-lg text-gray-600">Loading product data...</span>
+    </div>
+    
+    <div id="product-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline" id="error-message">Unable to load product data.</span>
+    </div>
+    
+    <form id="edit-product-form" class="hidden bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left column - Basic Info -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Basic Information</h2>
+                
+                <div class="mb-4">
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Product Name*</label>
+                    <input type="text" id="name" name="name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price (ETB)*</label>
+                        <input type="number" id="price" name="price" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity*</label>
+                        <input type="number" id="quantity" name="quantity" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="shortDescription" class="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+                    <input type="text" id="shortDescription" name="shortDescription" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Full Description</label>
+                    <textarea id="description" name="description" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <input type="text" id="category" name="category" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="subcategory" class="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                        <input type="text" id="subcategory" name="subcategory" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="brand" class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                        <input type="text" id="brand" name="brand" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="countryOfOrigin" class="block text-sm font-medium text-gray-700 mb-1">Country of Origin</label>
+                        <input type="text" id="countryOfOrigin" name="countryOfOrigin" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right column - Additional Info -->
+            <div>
+                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Inventory & Shipping</h2>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="inStock" name="inStock" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">In Stock</span>
+                    </label>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="lowStockAlert" name="lowStockAlert" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Enable Low Stock Alert</span>
+                    </label>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="lowStockThreshold" class="block text-sm font-medium text-gray-700 mb-1">Low Stock Threshold</label>
+                    <input type="number" id="lowStockThreshold" name="lowStockThreshold" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="shippingCost" class="block text-sm font-medium text-gray-700 mb-1">Shipping Cost (ETB)</label>
+                        <input type="number" id="shippingCost" name="shippingCost" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="shippingCostType" class="block text-sm font-medium text-gray-700 mb-1">Shipping Type</label>
+                        <select id="shippingCostType" name="shippingCostType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="fixed">Fixed</option>
+                            <option value="variable">Variable</option>
+                            <option value="free">Free</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="estimatedDeliveryDays" class="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery (days)</label>
+                    <input type="number" id="estimatedDeliveryDays" name="estimatedDeliveryDays" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="returnPolicy" class="block text-sm font-medium text-gray-700 mb-1">Return Policy</label>
+                    <select id="returnPolicy" name="returnPolicy" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="No Returns">No Returns</option>
+                        <option value="7 Days">7 Days</option>
+                        <option value="14 Days">14 Days</option>
+                        <option value="30 Days">30 Days</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="weight" class="block text-sm font-medium text-gray-700 mb-1">Weight</label>
+                    <input type="text" id="weight" name="weight" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="dimensions" class="block text-sm font-medium text-gray-700 mb-1">Dimensions</label>
+                    <input type="text" id="dimensions" name="dimensions" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Image URLs -->
+        <div class="px-6 pb-6">
+            <h2 class="text-lg font-semibold mb-4 border-b pb-2">Product Images</h2>
+            
+            <div class="mb-4">
+                <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">Main Image URL</label>
+                <input type="url" id="imageUrl" name="imageUrl" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <div id="additional-images-container">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Additional Image URLs</label>
+                <!-- Additional image inputs will be added here -->
+            </div>
+            
+            <button type="button" id="add-image-btn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-3 rounded-md text-sm">
+                + Add Another Image
+            </button>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-4">
+            <button type="button" id="cancel-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg">
+                Cancel
+            </button>
+            <button type="submit" id="save-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get product ID from URL
+        const urlParts = window.location.pathname.split('/');
+        const productId = urlParts[urlParts.length - 2];
+        
+        // Get elements
+        const productLoading = document.getElementById('product-loading');
+        const productError = document.getElementById('product-error');
+        const errorMessage = document.getElementById('error-message');
+        const editForm = document.getElementById('edit-product-form');
+        const additionalImagesContainer = document.getElementById('additional-images-container');
+        const addImageBtn = document.getElementById('add-image-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        
+        // Additional images array to keep track
+        let additionalImages = [];
+        
+        // Load product data
+        function loadProductData() {
+            // Show loading, hide form and error
+            productLoading.classList.remove('hidden');
+            editForm.classList.add('hidden');
+            productError.classList.add('hidden');
+            
+            // Get Firestore reference
+            const db = firebase.firestore();
+            const productRef = db.collection('products').doc(productId);
+            
+            // Get product
+            productRef.get().then((doc) => {
+                if (doc.exists) {
+                    const product = doc.data();
+                    
+                    // Fill form with product data
+                    document.getElementById('name').value = product.name || '';
+                    document.getElementById('price').value = product.price || '';
+                    document.getElementById('quantity').value = product.quantity || '';
+                    document.getElementById('shortDescription').value = product.shortDescription || '';
+                    document.getElementById('description').value = product.description || '';
+                    document.getElementById('category').value = product.category || '';
+                    document.getElementById('subcategory').value = product.subcategory || '';
+                    document.getElementById('brand').value = product.brand || '';
+                    document.getElementById('countryOfOrigin').value = product.countryOfOrigin || '';
+                    document.getElementById('inStock').checked = product.inStock || false;
+                    document.getElementById('lowStockAlert').checked = product.lowStockAlert || false;
+                    document.getElementById('lowStockThreshold').value = product.lowStockThreshold || '';
+                    document.getElementById('shippingCost').value = product.shippingCost || '';
+                    document.getElementById('shippingCostType').value = product.shippingCostType || 'fixed';
+                    document.getElementById('estimatedDeliveryDays').value = product.estimatedDeliveryDays || '';
+                    document.getElementById('returnPolicy').value = product.returnPolicy || 'No Returns';
+                    document.getElementById('weight').value = product.weight || '';
+                    document.getElementById('dimensions').value = product.dimensions || '';
+                    document.getElementById('imageUrl').value = product.imageUrl || '';
+                    
+                    // Handle additional images
+                    additionalImages = product.additionalImages || [];
+                    renderAdditionalImages();
+                    
+                    // Hide loading, show form
+                    productLoading.classList.add('hidden');
+                    editForm.classList.remove('hidden');
+                } else {
+                    // Product not found
+                    errorMessage.textContent = 'Product not found.';
+                    productLoading.classList.add('hidden');
+                    productError.classList.remove('hidden');
+                }
+            }).catch((error) => {
+                console.error("Error getting product: ", error);
+                errorMessage.textContent = 'Error loading product data. Please try again.';
+                productLoading.classList.add('hidden');
+                productError.classList.remove('hidden');
+            });
+        }
+        
+        // Render additional images inputs
+        function renderAdditionalImages() {
+            additionalImagesContainer.innerHTML = '';
+            
+            additionalImages.forEach((imageUrl, index) => {
+                const imageInputGroup = document.createElement('div');
+                imageInputGroup.className = 'flex items-center mb-2';
+                imageInputGroup.innerHTML = `
+                    <input type="url" class="additional-image-url w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" value="${imageUrl}">
+                    <button type="button" class="remove-image-btn ml-2 bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-md" data-index="${index}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
+                additionalImagesContainer.appendChild(imageInputGroup);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-image-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    additionalImages.splice(index, 1);
+                    renderAdditionalImages();
+                });
+            });
+        }
+        
+        // Add image button click handler
+        addImageBtn.addEventListener('click', function() {
+            additionalImages.push('');
+            renderAdditionalImages();
+        });
+        
+        // Cancel button click handler
+        cancelBtn.addEventListener('click', function() {
+            window.location.href = '{% url "admin_dashboard:product_list" %}';
+        });
+        
+        // Form submit handler
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading
+            productLoading.classList.remove('hidden');
+            editForm.classList.add('hidden');
+            
+            // Get updated additional image URLs
+            const updatedAdditionalImages = [];
+            document.querySelectorAll('.additional-image-url').forEach(input => {
+                if (input.value.trim()) {
+                    updatedAdditionalImages.push(input.value.trim());
+                }
+            });
+            
+            // Create updated product data
+            const updatedProduct = {
+                name: document.getElementById('name').value,
+                price: parseFloat(document.getElementById('price').value),
+                quantity: parseInt(document.getElementById('quantity').value),
+                shortDescription: document.getElementById('shortDescription').value,
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                subcategory: document.getElementById('subcategory').value,
+                brand: document.getElementById('brand').value,
+                countryOfOrigin: document.getElementById('countryOfOrigin').value,
+                inStock: document.getElementById('inStock').checked,
+                lowStockAlert: document.getElementById('lowStockAlert').checked,
+                lowStockThreshold: document.getElementById('lowStockThreshold').value ? parseInt(document.getElementById('lowStockThreshold').value) : null,
+                shippingCost: document.getElementById('shippingCost').value ? parseFloat(document.getElementById('shippingCost').value) : 0,
+                shippingCostType: document.getElementById('shippingCostType').value,
+                estimatedDeliveryDays: document.getElementById('estimatedDeliveryDays').value,
+                returnPolicy: document.getElementById('returnPolicy').value,
+                weight: document.getElementById('weight').value,
+                dimensions: document.getElementById('dimensions').value,
+                imageUrl: document.getElementById('imageUrl').value,
+                additionalImages: updatedAdditionalImages,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // Get Firestore reference
+            const db = firebase.firestore();
+            const productRef = db.collection('products').doc(productId);
+            
+            // Update product
+            productRef.update(updatedProduct).then(() => {
+                // Show success message
+                alert('Product updated successfully!');
+                
+                // Redirect to product detail page
+                window.location.href = `/products/${productId}/`;
+            }).catch((error) => {
+                console.error("Error updating product: ", error);
+                errorMessage.textContent = 'Error updating product. Please try again.';
+                productLoading.classList.add('hidden');
+                productError.classList.remove('hidden');
+            });
+        });
+        
+        // Load product data
+        loadProductData();
+    });
+</script>
+{% endblock %}

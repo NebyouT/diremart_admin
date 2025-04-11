@@ -1,0 +1,438 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Product Details{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Product Details</h1>
+        <a href="{% url 'admin_dashboard:product_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            Back to Products
+        </a>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-container" class="flex justify-center items-center py-12">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-lg text-gray-600">Loading product details...</span>
+    </div>
+    
+    <!-- Error State -->
+    <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline" id="error-message">Unable to load product details.</span>
+        <button id="retry-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg">
+            Retry
+        </button>
+    </div>
+    
+    <!-- Product Details -->
+    <div id="product-container" class="hidden">
+        <!-- Main Product Info -->
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Product Images -->
+                <div class="p-6">
+                    <div class="bg-gray-100 rounded-lg flex items-center justify-center h-64 mb-4">
+                        <img id="main-image" src="{% static 'img/placeholder.svg' %}" alt="Product" class="max-h-full max-w-full object-contain">
+                    </div>
+                    
+                    <!-- Additional Images -->
+                    <div id="additional-images" class="grid grid-cols-4 gap-2 mt-4">
+                        <!-- Additional images will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Product Info -->
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h2 id="product-name" class="text-2xl font-bold text-gray-800">Loading...</h2>
+                        <div id="discount-badge" class="hidden">
+                            <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">-0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center mb-4">
+                        <span id="product-category" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">Category</span>
+                        <span id="product-subcategory" class="text-sm bg-indigo-100 text-indigo-800 px-2 py-1 rounded">Subcategory</span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <span class="text-3xl font-bold text-gray-900" id="product-price">ETB 0</span>
+                                <span id="original-price" class="text-sm text-gray-500 line-through ml-2 hidden">ETB 0</span>
+                            </div>
+                            <span id="stock-status" class="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">In Stock</span>
+                        </div>
+                        <p id="product-short-description" class="text-gray-600 italic mt-2">Loading description...</p>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 py-4">
+                        <h3 class="text-lg font-semibold mb-2">Product Details</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Brand</p>
+                                <p id="product-brand" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Origin</p>
+                                <p id="product-origin" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Quantity</p>
+                                <p id="product-quantity" class="font-medium">0</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Added On</p>
+                                <p id="product-date" class="font-medium">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 py-4">
+                        <h3 class="text-lg font-semibold mb-2">Shipping Information</h3>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Shipping Cost</p>
+                                <p id="shipping-cost" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Shipping Type</p>
+                                <p id="shipping-type" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Delivery Days</p>
+                                <p id="delivery-days" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Return Policy</p>
+                                <p id="return-policy" class="font-medium">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 py-4">
+                        <h3 class="text-lg font-semibold mb-2">Description</h3>
+                        <p id="product-description" class="text-gray-700 whitespace-pre-line">No description available.</p>
+                    </div>
+                    
+                    <div id="tags-container" class="border-t border-gray-200 py-4">
+                        <h3 class="text-lg font-semibold mb-2">Tags</h3>
+                        <div id="product-tags" class="flex flex-wrap gap-2">
+                            <!-- Tags will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-4">
+                <button id="flag-button" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd" />
+                    </svg>
+                    Flag Product
+                </button>
+                <button id="unflag-button" class="hidden bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Remove Flag
+                </button>
+                <button id="delete-button" class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    Delete Product
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Safely set text content with null checks
+function setElementText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    } else {
+        console.warn(`Element with id '${id}' not found`);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Get product ID from URL
+    const urlParts = window.location.pathname.split('/');
+    const productId = urlParts[urlParts.length - 2];
+    
+    // Get DOM elements
+    const loadingContainer = document.getElementById('loading-container');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const productContainer = document.getElementById('product-container');
+    const retryButton = document.getElementById('retry-button');
+    const editButton = document.getElementById('edit-button');
+    const deleteButton = document.getElementById('delete-button');
+    
+    // Load product details
+    function loadProductDetails() {
+        // Show loading, hide product and error
+        loadingContainer.classList.remove('hidden');
+        productContainer.classList.add('hidden');
+        errorContainer.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get product
+        db.collection('products').doc(productId).get().then((doc) => {
+            // Hide loading
+            loadingContainer.classList.add('hidden');
+            
+            if (doc.exists) {
+                const product = doc.data();
+                console.log("Product data:", product); // For debugging
+                
+                // Set product name and description
+                setElementText('product-name', product.name || 'Unnamed Product');
+                setElementText('product-description', product.description || 'No description available');
+                setElementText('product-short-description', product.shortDescription || '');
+                
+                // Set category and subcategory
+                setElementText('product-category', product.category || 'Uncategorized');
+                setElementText('product-subcategory', product.subcategory || '');
+                
+                // Set price with ETB currency
+                const formattedPrice = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'ETB',
+                    minimumFractionDigits: 0
+                }).format(product.price || 0);
+                setElementText('product-price', formattedPrice);
+                
+                // Handle discount if present
+                const discountBadge = document.getElementById('discount-badge');
+                const originalPrice = document.getElementById('original-price');
+                if (product.discount && product.discount > 0) {
+                    discountBadge.innerHTML = `<span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded">-${product.discount}%</span>`;
+                    discountBadge.classList.remove('hidden');
+                    
+                    // Calculate original price if needed
+                    const originalPriceValue = product.originalPrice || (product.price / (1 - product.discount/100));
+                    originalPrice.textContent = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'ETB',
+                        minimumFractionDigits: 0
+                    }).format(originalPriceValue);
+                    originalPrice.classList.remove('hidden');
+                }
+                
+                // Set stock status
+                const stockStatus = document.getElementById('stock-status');
+                if (product.inStock) {
+                    stockStatus.textContent = `In Stock (${product.quantity || 0})`;
+                    stockStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+                } else {
+                    stockStatus.textContent = 'Out of Stock';
+                    stockStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+                }
+                
+                // Set product status
+                const statusEl = document.getElementById('product-status');
+                const flagButton = document.getElementById('flag-button');
+                const unflagButton = document.getElementById('unflag-button');
+                
+                if (product.status && statusEl) {
+                    statusEl.textContent = `Status: ${product.status}`;
+                    
+                    // Set status color
+                    if (product.status === 'Active') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-green-100 text-green-800';
+                        // Show flag button, hide unflag button
+                        if (flagButton) flagButton.classList.remove('hidden');
+                        if (unflagButton) unflagButton.classList.add('hidden');
+                    } else if (product.status === 'Flagged') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800';
+                        // Hide flag button, show unflag button
+                        if (flagButton) flagButton.classList.add('hidden');
+                        if (unflagButton) unflagButton.classList.remove('hidden');
+                    } else if (product.status === 'Inactive') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-red-100 text-red-800';
+                        // Show flag button, hide unflag button
+                        if (flagButton) flagButton.classList.remove('hidden');
+                        if (unflagButton) unflagButton.classList.add('hidden');
+                    }
+                }
+                
+                // Set product details
+                setElementText('product-brand', product.brand || 'N/A');
+                setElementText('product-origin', product.countryOfOrigin || 'N/A');
+                setElementText('product-warranty', product.warranty || 'N/A');
+                setElementText('product-weight', product.weight ? `${product.weight} ${product.weightUnit || 'kg'}` : 'N/A');
+                setElementText('product-dimensions', product.dimensions || 'N/A');
+                
+                // Set shipping information
+                const shippingCost = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'ETB',
+                    minimumFractionDigits: 0
+                }).format(product.shippingCost || 0);
+                
+                
+                setElementText('shipping-cost', shippingCost);
+                setElementText('shipping-type', product.shippingCostType || 'Fixed');
+                setElementText('delivery-days', product.estimatedDeliveryDays ? `${product.estimatedDeliveryDays} days` : 'Not specified');
+                setElementText('return-policy', product.returnPolicy || 'N/A');
+                
+                // Format date
+                if (product.createdAt) {
+                    try {
+                        const date = product.createdAt.toDate ? product.createdAt.toDate() : new Date(product.createdAt);
+                        const formattedDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        setElementText('product-date', formattedDate);
+                    } catch (e) {
+                        console.error('Error formatting date:', e);
+                        setElementText('product-date', 'Unknown');
+                    }
+                } else {
+                    setElementText('product-date', 'Not available');
+                }
+                
+                // Set main image
+                const mainImage = document.getElementById('main-image');
+                mainImage.src = product.imageUrl || '{% static "img/placeholder.svg" %}';
+                mainImage.alt = product.name || 'Product';
+                
+                // Set additional images
+                const additionalImagesContainer = document.getElementById('additional-images');
+                additionalImagesContainer.innerHTML = ''; // Clear existing content
+                
+                if (product.additionalImages && product.additionalImages.length > 0) {
+                    product.additionalImages.forEach((imageUrl, index) => {
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = 'bg-gray-100 rounded overflow-hidden h-16 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity';
+                        
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.alt = `Product image ${index + 1}`;
+                        img.className = 'max-h-full max-w-full object-contain';
+                        
+                        // Add click event to switch main image
+                        imgContainer.addEventListener('click', function() {
+                            mainImage.src = imageUrl;
+                        });
+                        
+                        imgContainer.appendChild(img);
+                        additionalImagesContainer.appendChild(imgContainer);
+                    });
+                }
+                
+                // Set tags
+                const tagsContainer = document.getElementById('product-tags');
+                tagsContainer.innerHTML = ''; // Clear existing content
+                
+                if (product.tags && product.tags.length > 0) {
+                    product.tags.forEach(tag => {
+                        const badge = document.createElement('span');
+                        badge.className = 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded';
+                        badge.textContent = tag;
+                        tagsContainer.appendChild(badge);
+                    });
+                } else {
+                    tagsContainer.textContent = 'No tags';
+                }
+                
+                // Update page title
+                document.title = `${product.name || 'Product'} - Details`;
+                
+                // Show product container
+                productContainer.classList.remove('hidden');
+            } else {
+                // Product not found
+                errorMessage.textContent = 'Product not found.';
+                errorContainer.classList.remove('hidden');
+            }
+        }).catch((error) => {
+            console.error("Error getting product:", error);
+            errorMessage.textContent = 'Error loading product details. Please try again.';
+            errorContainer.classList.remove('hidden');
+        });
+    }
+    
+    // Retry button click handler
+    retryButton.addEventListener('click', loadProductDetails);
+    
+    // Flag product button click handler
+    document.getElementById('flag-button').addEventListener('click', function() {
+        window.location.href = "{% url 'admin_dashboard:product_flag' '000' %}".replace('000', productId);
+    });
+    
+    // Unflag product button click handler
+    document.getElementById('unflag-button').addEventListener('click', function() {
+        if (confirm('Are you sure you want to remove the flag from this product?')) {
+            // Show loading
+            document.getElementById('loading-container').classList.remove('hidden');
+            document.getElementById('product-container').classList.add('hidden');
+            
+            // Update product status in Firestore
+            db.collection('products').doc(productId).update({
+                status: 'Active',
+                flaggedIssues: [],
+                flaggedNotes: '',
+                flaggedDate: null,
+                flaggedBy: null
+            })
+            .then(() => {
+                // Reload the page to show updated status
+                window.location.reload();
+            })
+            .catch((error) => {
+                console.error('Error unflagging product:', error);
+                alert('Error unflagging product: ' + error.message);
+                document.getElementById('loading-container').classList.add('hidden');
+                document.getElementById('product-container').classList.remove('hidden');
+            });
+        }
+    });
+    
+    // Delete product button click handler
+    deleteButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to delete this product?')) {
+            // Show loading
+            loadingContainer.classList.remove('hidden');
+            productContainer.classList.add('hidden');
+            
+            // Get Firestore reference
+            const db = firebase.firestore();
+            
+            // Delete product
+            db.collection('products').doc(productId).delete().then(() => {
+                // Redirect to products list
+                window.location.href = '{% url "admin_dashboard:product_list" %}';
+            }).catch((error) => {
+                console.error("Error deleting product:", error);
+                errorMessage.textContent = 'Error deleting product. Please try again.';
+                loadingContainer.classList.add('hidden');
+                errorContainer.classList.remove('hidden');
+            });
+        }
+    });
+    
+    // Load product details when the page loads
+    loadProductDetails();
+});
+</script>
+{% endblock %}

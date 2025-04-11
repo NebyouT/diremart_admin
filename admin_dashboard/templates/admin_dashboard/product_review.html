@@ -1,0 +1,325 @@
+{% extends 'admin_dashboard/base.html' %}
+
+{% block title %}Product Review{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Product Review</h1>
+        <a href="{% url 'admin_dashboard:product_detail' product_id %}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            Back to Product
+        </a>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="loading-container" class="flex justify-center items-center py-12">
+        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-lg text-gray-600">Loading product details...</span>
+    </div>
+    
+    <!-- Error State -->
+    <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline" id="error-message">Unable to load product details.</span>
+        <button id="retry-button" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg">
+            Retry
+        </button>
+    </div>
+    
+    <!-- Product Review Form -->
+    <div id="review-container" class="hidden">
+        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+            <div class="p-6">
+                <div class="flex items-start mb-6">
+                    <div class="mr-4">
+                        <img id="product-image" src="https://via.placeholder.com/100x100?text=No+Image" alt="Product" class="w-24 h-24 object-cover rounded">
+                    </div>
+                    <div>
+                        <h2 id="product-name" class="text-xl font-bold text-gray-800 mb-1">Loading...</h2>
+                        <p id="product-seller" class="text-sm text-gray-600 mb-2">Seller: Unknown</p>
+                        <div class="flex items-center">
+                            <span id="product-price" class="text-lg font-semibold text-gray-900 mr-3">ETB 0</span>
+                            <span id="product-status" class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Status: Active</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold mb-4">Review Checklist</h3>
+                    <p class="text-sm text-gray-600 mb-4">Select the issues that need to be fixed by the seller:</p>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-image-quality" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-image-quality" class="font-medium text-gray-700">Image Quality Issues</label>
+                                <p class="text-sm text-gray-500">Images are blurry, low resolution, or don't clearly show the product</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-description" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-description" class="font-medium text-gray-700">Inadequate Description</label>
+                                <p class="text-sm text-gray-500">Product description is too short, unclear, or missing important details</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-category" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-category" class="font-medium text-gray-700">Incorrect Category/Subcategory</label>
+                                <p class="text-sm text-gray-500">Product is listed in the wrong category or subcategory</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-price" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-price" class="font-medium text-gray-700">Pricing Issues</label>
+                                <p class="text-sm text-gray-500">Price is unreasonable, inconsistent, or missing</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-shipping" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-shipping" class="font-medium text-gray-700">Shipping Information Missing</label>
+                                <p class="text-sm text-gray-500">Shipping cost, delivery time, or regions not properly specified</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-brand" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-brand" class="font-medium text-gray-700">Brand/Origin Information</label>
+                                <p class="text-sm text-gray-500">Brand name or country of origin is missing or incorrect</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-policy" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-policy" class="font-medium text-gray-700">Return Policy Unclear</label>
+                                <p class="text-sm text-gray-500">Return policy is missing or not clearly stated</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <input type="checkbox" id="check-inappropriate" class="mt-1 mr-3">
+                            <div>
+                                <label for="check-inappropriate" class="font-medium text-gray-700">Inappropriate Content</label>
+                                <p class="text-sm text-gray-500">Product contains inappropriate images or descriptions</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label for="additional-notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes for Seller</label>
+                        <textarea id="additional-notes" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Provide any additional feedback or specific instructions for the seller..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-4">
+                <button id="cancel-button" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg">
+                    Cancel
+                </button>
+                <button id="send-notification-button" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                    </svg>
+                    Send Notification
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Message -->
+    <div id="success-container" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
+        <strong class="font-bold">Success!</strong>
+        <span class="block sm:inline">Notification sent to seller successfully. Product status changed to "Pending Review".</span>
+        <div class="mt-4">
+            <a href="{% url 'admin_dashboard:product_list' %}" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg inline-block">
+                Back to Products
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get product ID from URL
+    const urlParts = window.location.pathname.split('/');
+    const productId = urlParts[urlParts.length - 2];
+    
+    // Get DOM elements
+    const loadingContainer = document.getElementById('loading-container');
+    const errorContainer = document.getElementById('error-container');
+    const reviewContainer = document.getElementById('review-container');
+    const successContainer = document.getElementById('success-container');
+    const errorMessage = document.getElementById('error-message');
+    const retryButton = document.getElementById('retry-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const sendNotificationButton = document.getElementById('send-notification-button');
+    
+    // Load product details
+    function loadProductDetails() {
+        // Show loading, hide other containers
+        loadingContainer.classList.remove('hidden');
+        reviewContainer.classList.add('hidden');
+        errorContainer.classList.add('hidden');
+        successContainer.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get product
+        db.collection('products').doc(productId).get().then((doc) => {
+            // Hide loading
+            loadingContainer.classList.add('hidden');
+            
+            if (doc.exists) {
+                const product = doc.data();
+                console.log("Product data:", product);
+                
+                // Set product details
+                document.getElementById('product-name').textContent = product.name || 'Unnamed Product';
+                document.getElementById('product-seller').textContent = `Seller ID: ${product.sellerId || 'Unknown'}`;
+                
+                // Set price with ETB currency
+                const formattedPrice = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'ETB',
+                    minimumFractionDigits: 0
+                }).format(product.price || 0);
+                document.getElementById('product-price').textContent = formattedPrice;
+                
+                // Set product status
+                const statusEl = document.getElementById('product-status');
+                if (product.status) {
+                    statusEl.textContent = `Status: ${product.status}`;
+                    
+                    // Set status color
+                    if (product.status === 'Active') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-green-100 text-green-800';
+                    } else if (product.status === 'Pending Review') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800';
+                    } else if (product.status === 'Inactive') {
+                        statusEl.className = 'px-2 py-1 text-xs rounded bg-red-100 text-red-800';
+                    }
+                }
+                
+                // Set product image
+                const productImage = document.getElementById('product-image');
+                productImage.src = product.imageUrl || 'https://via.placeholder.com/100x100?text=No+Image';
+                productImage.alt = product.name || 'Product';
+                
+                // Show review container
+                reviewContainer.classList.remove('hidden');
+            } else {
+                // Product not found
+                errorMessage.textContent = 'Product not found.';
+                errorContainer.classList.remove('hidden');
+            }
+        }).catch((error) => {
+            console.error("Error getting product:", error);
+            errorMessage.textContent = 'Error loading product details. Please try again.';
+            errorContainer.classList.remove('hidden');
+        });
+    }
+    
+    // Send notification to seller
+    function sendNotificationToSeller() {
+        // Get selected issues
+        const issues = [];
+        if (document.getElementById('check-image-quality').checked) issues.push('Image Quality Issues');
+        if (document.getElementById('check-description').checked) issues.push('Inadequate Description');
+        if (document.getElementById('check-category').checked) issues.push('Incorrect Category/Subcategory');
+        if (document.getElementById('check-price').checked) issues.push('Pricing Issues');
+        if (document.getElementById('check-shipping').checked) issues.push('Shipping Information Missing');
+        if (document.getElementById('check-brand').checked) issues.push('Brand/Origin Information');
+        if (document.getElementById('check-policy').checked) issues.push('Return Policy Unclear');
+        if (document.getElementById('check-inappropriate').checked) issues.push('Inappropriate Content');
+        
+        // Get additional notes
+        const additionalNotes = document.getElementById('additional-notes').value;
+        
+        // Validate at least one issue is selected
+        if (issues.length === 0) {
+            alert('Please select at least one issue to notify the seller about.');
+            return;
+        }
+        
+        // Show loading
+        loadingContainer.classList.remove('hidden');
+        reviewContainer.classList.add('hidden');
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        
+        // Get product and seller ID
+        db.collection('products').doc(productId).get().then((doc) => {
+            if (doc.exists) {
+                const product = doc.data();
+                const sellerId = product.sellerId;
+                
+                if (!sellerId) {
+                    throw new Error('Seller ID not found for this product');
+                }
+                
+                // Create notification object
+                const notification = {
+                    sellerId: sellerId,
+                    productId: productId,
+                    productName: product.name || 'Unnamed Product',
+                    issues: issues,
+                    additionalNotes: additionalNotes,
+                    status: 'unread',
+                    type: 'product_review',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Add notification to database
+                return db.collection('notifications').add(notification).then(() => {
+                    // Update product status to "Pending Review"
+                    return db.collection('products').doc(productId).update({
+                        status: 'Pending Review',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+            } else {
+                throw new Error('Product not found');
+            }
+        }).then(() => {
+            // Show success message
+            loadingContainer.classList.add('hidden');
+            successContainer.classList.remove('hidden');
+        }).catch((error) => {
+            console.error("Error sending notification:", error);
+            errorMessage.textContent = 'Error sending notification. Please try again.';
+            loadingContainer.classList.add('hidden');
+            errorContainer.classList.remove('hidden');
+        });
+    }
+    
+    // Event listeners
+    retryButton.addEventListener('click', loadProductDetails);
+    
+    cancelButton.addEventListener('click', function() {
+        window.location.href = `/products/${productId}/`;
+    });
+    
+    sendNotificationButton.addEventListener('click', sendNotificationToSeller);
+    
+    // Load product details when the page loads
+    loadProductDetails();
+});
+</script>
+{% endblock %}
