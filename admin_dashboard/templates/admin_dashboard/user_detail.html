@@ -105,7 +105,7 @@
         <!-- User Activity Section -->
         <div class="mt-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">User Activity</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <!-- Orders -->
                 <div class="bg-white rounded-lg shadow-md overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-200">
@@ -149,6 +149,63 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Transactions -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-800">Transactions</h3>
+                    </div>
+                    <div id="user-transactions-loading" class="flex justify-center items-center py-8">
+                        <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Loading transactions...</span>
+                    </div>
+                    <div id="user-transactions-container" class="hidden">
+                        <div id="user-transactions-list" class="divide-y divide-gray-200">
+                            <!-- Transactions will be loaded here -->
+                        </div>
+                        <div id="no-transactions-message" class="p-6 text-center hidden">
+                            <p class="text-gray-500">No transactions found for this user.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Withdrawal Requests Section -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden mt-6" id="withdrawal-requests-section">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-gray-800">Withdrawal Requests</h3>
+                    <a href="{% url 'admin_dashboard:withdrawal_requests' %}" class="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                        View All Withdrawals
+                    </a>
+                </div>
+                <div id="withdrawal-requests-loading" class="flex justify-center items-center py-4">
+                    <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="ml-2 text-sm text-gray-600">Loading withdrawal requests...</span>
+                </div>
+                <div id="withdrawal-requests-container" class="hidden">
+                    <div class="p-4">
+                        <p class="text-sm text-gray-600 mb-2">This user has withdrawal requests. Click the button below to view and manage them:</p>
+                        <a href="{% url 'admin_dashboard:withdrawal_requests' %}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            Manage Withdrawal Requests
+                        </a>
+                    </div>
+                    <div id="no-withdrawal-requests-message" class="p-6 text-center hidden">
+                        <p class="text-gray-500">No withdrawal requests found for this user.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -190,9 +247,15 @@
 <!-- Notification container -->
 <div id="notification-container" class="fixed bottom-4 right-4 z-50"></div>
 
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="{% static 'js/firebase-config.js' %}"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM elements
+    // Firebase should already be initialized in firebase-config.js
+    // Use the global db variable
     const userLoading = document.getElementById('user-loading');
     const userDetailContainer = document.getElementById('user-detail-container');
     const noUserMessage = document.getElementById('no-user-message');
@@ -226,6 +289,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const userProductsList = document.getElementById('user-products-list');
     const noProductsMessage = document.getElementById('no-products-message');
     
+    // Withdrawal request elements
+    const withdrawalRequestsLoading = document.getElementById('withdrawal-requests-loading');
+    const withdrawalRequestsContainer = document.getElementById('withdrawal-requests-container');
+    const withdrawalRequestsList = document.getElementById('withdrawal-requests-list');
+    const noWithdrawalRequestsMessage = document.getElementById('no-withdrawal-requests-message');
+    
     // Reset password modal elements
     const resetPasswordModal = document.getElementById('reset-password-modal');
     const closeResetModalBtn = document.getElementById('close-reset-modal-btn');
@@ -255,12 +324,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     userData = data;
                     renderUserDetails(data);
                     loadUserOrders();
+                    loadUserTransactions();
                     
                     // If user is a seller, load their products
                     if (data.role === 'seller') {
                         userProductsSection.classList.remove('hidden');
                         loadUserProducts();
                     }
+                    
+                    // Dispatch event that user data is loaded
+                    document.dispatchEvent(new Event('userDataLoaded'));
                 } else {
                     throw new Error('User not found');
                 }
@@ -315,54 +388,79 @@ document.addEventListener('DOMContentLoaded', function() {
         userOrdersContainer.classList.add('hidden');
         
         const db = firebase.firestore();
-        
-        // Try different possible field names for user ID in orders collection
         console.log('Attempting to load orders for user ID:', userId);
         
-        // First try with user_id field
+        // Array to store all user orders
+        const allUserOrders = [];
+        
+        // First, check the regular orders collection (for buyer orders)
         db.collection('orders')
             .get()
             .then(snapshot => {
-                if (!snapshot.empty) {
-                    console.log('Found orders with user_id field:', snapshot.size);
-                    renderOrders(snapshot);
-                } else {
-                    console.log('No orders found with user_id field, trying buyerId');
-                    // Try with buyerId field
-                    return db.collection('orders')
-                        .where('buyerId', '==', userId)
-                        .get();
-                }
+                console.log('Checking buyer orders collection...');
+                
+                // Filter orders by buyer ID
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    order.id = doc.id;
+                    order.orderType = 'buyer'; // Mark as buyer order
+                    
+                    // Check various possible field names for buyer ID
+                    if (order.user_id === userId || 
+                        order.buyerId === userId || 
+                        order.buyer_id === userId) {
+                        allUserOrders.push(order);
+                    }
+                });
+                
+                console.log('Found buyer orders:', allUserOrders.length);
+                
+                // Now check the seller orders collection
+                return db.collection('sellerorders').get();
             })
             .then(snapshot => {
-                if (snapshot && !snapshot.empty) {
-                    console.log('Found orders with buyerId field:', snapshot.size);
-                    renderOrders(snapshot);
-                } else if (snapshot) {
-                    console.log('No orders found with buyerId field, trying buyer_id');
-                    // Try with buyer_id field
-                    return db.collection('orders')
-                        .where('buyer_id', '==', userId)
-                        .get();
-                }
-            })
-            .then(snapshot => {
-                if (snapshot && !snapshot.empty) {
-                    console.log('Found orders with buyer_id field:', snapshot.size);
-                    renderOrders(snapshot);
-                } else if (snapshot) {
-                    console.log('No orders found with any user ID field');
-                    userOrdersLoading.classList.add('hidden');
-                    userOrdersContainer.classList.remove('hidden');
+                console.log('Checking seller orders collection...');
+                
+                // Filter orders by seller ID
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    order.id = doc.id;
+                    order.orderType = 'seller'; // Mark as seller order
+                    
+                    // Check various possible field names for seller ID
+                    if (order.seller_id === userId || 
+                        order.sellerId === userId) {
+                        allUserOrders.push(order);
+                    }
+                });
+                
+                console.log('Total orders found (buyer + seller):', allUserOrders.length);
+                
+                // Show appropriate UI based on results
+                userOrdersLoading.classList.add('hidden');
+                userOrdersContainer.classList.remove('hidden');
+                
+                if (allUserOrders.length === 0) {
+                    console.log('No orders found for this user');
                     noOrdersMessage.classList.remove('hidden');
                     
-                    // Debug: List a few orders from the collection to see their structure
-                    db.collection('orders').limit(3).get().then(debugSnapshot => {
-                        console.log('Debug - Sample orders from collection:');
+                    // Debug: List a few orders from both collections
+                    console.log('Debug - Sample orders from collections:');
+                    let count = 0;
+                    db.collection('orders').limit(2).get().then(debugSnapshot => {
                         debugSnapshot.forEach(doc => {
-                            console.log('Order ID:', doc.id, 'Data:', doc.data());
+                            console.log('Buyer Order ID:', doc.id, 'Data:', doc.data());
+                        });
+                        
+                        db.collection('sellerorders').limit(2).get().then(sellerSnapshot => {
+                            sellerSnapshot.forEach(doc => {
+                                console.log('Seller Order ID:', doc.id, 'Data:', doc.data());
+                            });
                         });
                     });
+                } else {
+                    // Render the combined orders
+                    renderOrders(allUserOrders);
                 }
             })
             .catch(error => {
@@ -371,20 +469,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 userOrdersContainer.classList.remove('hidden');
                 noOrdersMessage.classList.remove('hidden');
             });
+    }
     
-    // Render orders from a snapshot
-    function renderOrders(snapshot) {
-        userOrdersLoading.classList.add('hidden');
-        userOrdersContainer.classList.remove('hidden');
-        
+    // Render orders from an array
+    function renderOrders(orders) {
         // Render orders
         userOrdersList.innerHTML = '';
-        const orders = [];
-        snapshot.forEach(doc => {
-            const order = doc.data();
-            order.id = doc.id;
-            orders.push(order);
-        });
         
         console.log('Processing orders:', orders);
         
@@ -510,52 +600,52 @@ document.addEventListener('DOMContentLoaded', function() {
         const db = firebase.firestore();
         console.log('Attempting to load products for seller ID:', userId);
         
-        // Try different possible field names for seller ID in products collection
+        // Get all products and filter client-side
         db.collection('products')
-            .where('seller_id', '==', userId)
             .get()
             .then(snapshot => {
-                if (!snapshot.empty) {
-                    console.log('Found products with seller_id field:', snapshot.size);
-                    renderProducts(snapshot);
-                } else {
-                    console.log('No products found with seller_id field, trying sellerId');
-                    // Try with sellerId field
-                    return db.collection('products')
-                        .where('sellerId', '==', userId)
-                        .get();
+                userProductsLoading.classList.add('hidden');
+                userProductsContainer.classList.remove('hidden');
+                
+                if (snapshot.empty) {
+                    console.log('No products found in the collection');
+                    noProductsMessage.classList.remove('hidden');
+                    return;
                 }
-            })
-            .then(snapshot => {
-                if (snapshot && !snapshot.empty) {
-                    console.log('Found products with sellerId field:', snapshot.size);
-                    renderProducts(snapshot);
-                } else if (snapshot) {
-                    console.log('No products found with sellerId field, trying userId');
-                    // Try with userId field
-                    return db.collection('products')
-                        .where('userId', '==', userId)
-                        .get();
-                }
-            })
-            .then(snapshot => {
-                if (snapshot && !snapshot.empty) {
-                    console.log('Found products with userId field:', snapshot.size);
-                    renderProducts(snapshot);
-                } else if (snapshot) {
-                    console.log('No products found with any seller ID field');
-                    userProductsLoading.classList.add('hidden');
-                    userProductsContainer.classList.remove('hidden');
+                
+                // Filter products by seller ID with various possible field names
+                const sellerProducts = [];
+                snapshot.forEach(doc => {
+                    const product = doc.data();
+                    product.id = doc.id;
+                    
+                    // Check various possible field names for seller ID
+                    if (product.seller_id === userId || 
+                        product.sellerId === userId || 
+                        product.userId === userId) {
+                        sellerProducts.push(product);
+                    }
+                });
+                
+                console.log('Found seller products:', sellerProducts.length);
+                
+                if (sellerProducts.length === 0) {
                     noProductsMessage.classList.remove('hidden');
                     
-                    // Debug: List a few products from the collection to see their structure
-                    db.collection('products').limit(3).get().then(debugSnapshot => {
-                        console.log('Debug - Sample products from collection:');
-                        debugSnapshot.forEach(doc => {
+                    // Debug: List a few products from the collection
+                    console.log('Debug - Sample products from collection:');
+                    let count = 0;
+                    snapshot.forEach(doc => {
+                        if (count < 3) {
                             console.log('Product ID:', doc.id, 'Data:', doc.data());
-                        });
+                            count++;
+                        }
                     });
+                    return;
                 }
+                
+                // Render the products
+                renderProducts(sellerProducts);
             })
             .catch(error => {
                 console.error('Error loading products:', error);
@@ -565,19 +655,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    // Render products from a snapshot
-    function renderProducts(snapshot) {
-        userProductsLoading.classList.add('hidden');
-        userProductsContainer.classList.remove('hidden');
-        
+    // Render products from an array
+    function renderProducts(products) {
         // Render products
         userProductsList.innerHTML = '';
-        const products = [];
-        snapshot.forEach(doc => {
-            const product = doc.data();
-            product.id = doc.id;
-            products.push(product);
-        });
         
         console.log('Processing products:', products);
         
@@ -817,8 +898,413 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Load withdrawal requests
+    function loadWithdrawalRequests() {
+        withdrawalRequestsLoading.classList.remove('hidden');
+        withdrawalRequestsContainer.classList.add('hidden');
+        
+        // Use the global db variable from firebase-config.js
+        console.log('Attempting to load withdrawal requests for user ID:', userId);
+        
+        // Get withdrawal requests for this user
+        db.collection('withdrawal_requests')
+            .where('userId', '==', userId)
+            .get()
+            .then(snapshot => {
+                withdrawalRequestsLoading.classList.add('hidden');
+                withdrawalRequestsContainer.classList.remove('hidden');
+                
+                if (snapshot.empty) {
+                    console.log('No withdrawal requests found for this user');
+                    noWithdrawalRequestsMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                const withdrawalRequests = [];
+                snapshot.forEach(doc => {
+                    const request = doc.data();
+                    request.id = doc.id;
+                    withdrawalRequests.push(request);
+                });
+                
+                console.log('Found withdrawal requests:', withdrawalRequests.length);
+                
+                // Render the withdrawal requests
+                renderWithdrawalRequests(withdrawalRequests);
+            })
+            .catch(error => {
+                console.error('Error loading withdrawal requests:', error);
+                withdrawalRequestsLoading.classList.add('hidden');
+                withdrawalRequestsContainer.classList.remove('hidden');
+                noWithdrawalRequestsMessage.classList.remove('hidden');
+            });
+    }
+    
+    // Render withdrawal requests summary
+    function renderWithdrawalRequests(requests) {
+        if (requests.length === 0) {
+            noWithdrawalRequestsMessage.classList.remove('hidden');
+            return;
+        }
+        
+        // Show the container with the link to the withdrawal requests page
+        withdrawalRequestsContainer.classList.remove('hidden');
+        
+        // Create a summary of withdrawal requests
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'mt-4 space-y-3';
+        
+        // Add a title for the summary
+        const summaryTitle = document.createElement('h4');
+        summaryTitle.className = 'text-sm font-medium text-gray-700';
+        summaryTitle.textContent = 'Recent Withdrawal Requests:';
+        summaryDiv.appendChild(summaryTitle);
+        
+        // Show up to 3 most recent requests
+        const recentRequests = requests.sort((a, b) => {
+            // Sort by created date (newest first)
+            const dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(0);
+            const dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(0);
+            return dateB - dateA;
+        }).slice(0, 3);
+        
+        // Create a clickable card for each request
+        recentRequests.forEach(request => {
+            const requestCard = document.createElement('div');
+            requestCard.className = 'bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors';
+            requestCard.onclick = function() {
+                // Use the proper URL format with the Django URL pattern
+                window.location.href = `{% url 'admin_dashboard:withdrawal_requests' %}?withdrawal_id=${request.id}`;
+            };
+            
+            // Format date
+            let createdDate = 'Unknown date';
+            if (request.createdAt && request.createdAt.toDate) {
+                createdDate = request.createdAt.toDate().toLocaleString();
+            } else if (request.createdAt && request.createdAt.seconds) {
+                createdDate = new Date(request.createdAt.seconds * 1000).toLocaleString();
+            }
+            
+            // Create card content
+            requestCard.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium">${request.amount} ETB</p>
+                        <p class="text-xs text-gray-500">${createdDate}</p>
+                    </div>
+                    <span class="${getStatusColor(request.status)}">${request.status || 'Unknown'}</span>
+                </div>
+            `;
+            
+            summaryDiv.appendChild(requestCard);
+        });
+        
+        // Add a note about viewing all requests
+        const viewAllNote = document.createElement('p');
+        viewAllNote.className = 'text-xs text-gray-500 mt-2';
+        viewAllNote.textContent = `Showing ${recentRequests.length} of ${requests.length} withdrawal requests. Click on any request or the button above to view all.`;
+        summaryDiv.appendChild(viewAllNote);
+        
+        // Add the summary to the container
+        const containerDiv = withdrawalRequestsContainer.querySelector('.p-4');
+        
+        // Remove any existing summary
+        const existingSummary = containerDiv.querySelector('.mt-4');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+        
+        containerDiv.appendChild(summaryDiv);
+    }
+    
+    // Helper function to get status color
+    function getStatusColor(status) {
+        if (!status) return 'text-gray-600';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'text-yellow-600 font-medium';
+            case 'approved':
+            case 'completed':
+            case 'success':
+                return 'text-green-600 font-medium';
+            case 'rejected':
+            case 'failed':
+                return 'text-red-600 font-medium';
+            default:
+                return 'text-gray-600';
+        }
+    }
+    
+    // Redirect to withdrawal requests page
+    function goToWithdrawalRequests() {
+        window.location.href = "{% url 'admin_dashboard:withdrawal_requests' %}";
+    }
+    
+    // Load user orders from Firestore
+    function loadUserOrders() {
+        const userOrdersLoading = document.getElementById('user-orders-loading');
+        const userOrdersContainer = document.getElementById('user-orders-container');
+        const userOrdersList = document.getElementById('user-orders-list');
+        const noOrdersMessage = document.getElementById('no-orders-message');
+        
+        // Show loading
+        userOrdersLoading.classList.remove('hidden');
+        userOrdersContainer.classList.add('hidden');
+        
+        // Get orders for this user - without requiring composite index
+        db.collection('orders')
+            .where('userId', '==', userId)
+            .get()
+            .then(snapshot => {
+                // Process results and sort client-side
+                return {
+                    empty: snapshot.empty,
+                    docs: snapshot.empty ? [] : snapshot.docs
+                        .map(doc => {
+                            const data = doc.data();
+                            data.id = doc.id;
+                            return data;
+                        })
+                        .sort((a, b) => {
+                            // Sort by createdAt descending
+                            const timeA = a.createdAt?.seconds || 0;
+                            const timeB = b.createdAt?.seconds || 0;
+                            return timeB - timeA;
+                        })
+                        .slice(0, 5) // Limit to 5 results
+                };
+            })
+            .then(result => {
+                // Hide loading
+                userOrdersLoading.classList.add('hidden');
+                userOrdersContainer.classList.remove('hidden');
+                
+                // Clear previous orders
+                userOrdersList.innerHTML = '';
+                
+                if (result.empty || result.docs.length === 0) {
+                    noOrdersMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                // Render orders
+                result.docs.forEach(order => {
+                    renderOrderItem(order, userOrdersList);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading orders:', error);
+                userOrdersLoading.classList.add('hidden');
+                userOrdersContainer.classList.remove('hidden');
+                noOrdersMessage.classList.remove('hidden');
+                noOrdersMessage.querySelector('p').textContent = 'Error loading orders.';
+            });
+    }
+    
+    // Render a single order item
+    function renderOrderItem(order, container) {
+        // Format date
+        let orderDate = 'Unknown date';
+        if (order.createdAt && order.createdAt.toDate) {
+            orderDate = order.createdAt.toDate().toLocaleString();
+        } else if (order.createdAt && order.createdAt.seconds) {
+            orderDate = new Date(order.createdAt.seconds * 1000).toLocaleString();
+        }
+        
+        // Calculate total amount
+        let totalAmount = 0;
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const itemPrice = parseFloat(item.price || 0);
+                const itemQuantity = parseInt(item.quantity || 1);
+                totalAmount += itemPrice * itemQuantity;
+            });
+        } else if (order.totalAmount) {
+            totalAmount = parseFloat(order.totalAmount);
+        }
+        
+        // Create order item element
+        const orderItem = document.createElement('div');
+        orderItem.className = 'p-4 hover:bg-gray-50 cursor-pointer';
+        orderItem.onclick = function() {
+            // Navigate to the order detail page
+            window.location.href = `{% url 'admin_dashboard:order_detail' order_id='placeholder' %}`.replace('placeholder', order.id);
+        };
+        
+        // Set order item content
+        orderItem.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium">${order.id.substring(0, 8)}...</p>
+                    <p class="text-xs text-gray-500">${orderDate}</p>
+                    <p class="text-xs mt-1">${(order.items?.length || 0)} item(s)</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium">${totalAmount.toFixed(2)} ETB</p>
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getOrderStatusColor(order.status)}">
+                        ${order.status || 'Unknown'}
+                    </span>
+                </div>
+            </div>
+        `;
+        
+        // Add to container
+        container.appendChild(orderItem);
+    }
+    
+    // Get color class for order status
+    function getOrderStatusColor(status) {
+        if (!status) return 'bg-gray-100 text-gray-800';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'processing':
+                return 'bg-blue-100 text-blue-800';
+            case 'completed':
+            case 'delivered':
+                return 'bg-green-100 text-green-800';
+            case 'cancelled':
+            case 'failed':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
+    // Load user transactions from Firestore
+    function loadUserTransactions() {
+        const userTransactionsLoading = document.getElementById('user-transactions-loading');
+        const userTransactionsContainer = document.getElementById('user-transactions-container');
+        const userTransactionsList = document.getElementById('user-transactions-list');
+        const noTransactionsMessage = document.getElementById('no-transactions-message');
+        
+        // Show loading
+        userTransactionsLoading.classList.remove('hidden');
+        userTransactionsContainer.classList.add('hidden');
+        
+        // Get transactions for this user - without requiring composite index
+        db.collection('transactions')
+            .where('userId', '==', userId)
+            .get()
+            .then(snapshot => {
+                // Process results and sort client-side
+                return {
+                    empty: snapshot.empty,
+                    docs: snapshot.empty ? [] : snapshot.docs
+                        .map(doc => {
+                            const data = doc.data();
+                            data.id = doc.id;
+                            return data;
+                        })
+                        .sort((a, b) => {
+                            // Sort by timestamp descending
+                            const timeA = a.timestamp?.seconds || 0;
+                            const timeB = b.timestamp?.seconds || 0;
+                            return timeB - timeA;
+                        })
+                        .slice(0, 5) // Limit to 5 results
+                };
+            })
+            .then(result => {
+                // Hide loading
+                userTransactionsLoading.classList.add('hidden');
+                userTransactionsContainer.classList.remove('hidden');
+                
+                // Clear previous transactions
+                userTransactionsList.innerHTML = '';
+                
+                if (result.empty || result.docs.length === 0) {
+                    noTransactionsMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                // Render transactions
+                result.docs.forEach(transaction => {
+                    renderTransactionItem(transaction, userTransactionsList);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading transactions:', error);
+                userTransactionsLoading.classList.add('hidden');
+                userTransactionsContainer.classList.remove('hidden');
+                noTransactionsMessage.classList.remove('hidden');
+                noTransactionsMessage.querySelector('p').textContent = 'Error loading transactions.';
+            });
+    }
+    
+    // Render a single transaction item
+    function renderTransactionItem(transaction, container) {
+        // Format date
+        let transactionDate = 'Unknown date';
+        if (transaction.timestamp && transaction.timestamp.toDate) {
+            transactionDate = transaction.timestamp.toDate().toLocaleString();
+        } else if (transaction.timestamp && transaction.timestamp.seconds) {
+            transactionDate = new Date(transaction.timestamp.seconds * 1000).toLocaleString();
+        }
+        
+        // Get transaction type and amount
+        const type = transaction.type || 'unknown';
+        const amount = parseFloat(transaction.amount || 0).toFixed(2);
+        
+        // Determine if it's credit or debit
+        const isCredit = type === 'deposit' || type === 'refund' || type === 'payment_received';
+        const amountClass = isCredit ? 'text-green-600' : 'text-red-600';
+        const amountPrefix = isCredit ? '+' : '-';
+        
+        // Create transaction item element
+        const transactionItem = document.createElement('div');
+        transactionItem.className = 'p-4 hover:bg-gray-50';
+        
+        // Set transaction item content
+        transactionItem.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium">${transaction.description || type.replace('_', ' ').toUpperCase()}</p>
+                    <p class="text-xs text-gray-500">${transactionDate}</p>
+                    <p class="text-xs mt-1">${transaction.reference ? 'Ref: ' + transaction.reference : ''}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-medium ${amountClass}">${amountPrefix}${amount} ETB</p>
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTransactionStatusColor(transaction.status)}">
+                        ${transaction.status || 'completed'}
+                    </span>
+                </div>
+            </div>
+        `;
+        
+        // Add to container
+        container.appendChild(transactionItem);
+    }
+    
+    // Get color class for transaction status
+    function getTransactionStatusColor(status) {
+        if (!status) return 'bg-green-100 text-green-800';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'processing':
+                return 'bg-blue-100 text-blue-800';
+            case 'completed':
+            case 'success':
+                return 'bg-green-100 text-green-800';
+            case 'failed':
+            case 'cancelled':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
     // Load user data on page load
     loadUserData();
+    
+    // Load withdrawal requests when user data is loaded
+    document.addEventListener('userDataLoaded', function() {
+        loadWithdrawalRequests();
+    });
 });
 </script>
 {% endblock %}

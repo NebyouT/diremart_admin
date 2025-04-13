@@ -1,0 +1,426 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Order Details{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Order Details</h1>
+        <a href="{% url 'admin_dashboard:order_list' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Orders
+        </a>
+    </div>
+
+    <div id="order-loading" class="flex justify-center items-center py-8">
+        <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-3 text-lg text-gray-600">Loading order details...</span>
+    </div>
+
+    <div id="order-detail-container" class="hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Order Summary -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-800">Order Summary</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <p class="text-sm text-gray-500">Order ID</p>
+                                <p id="order-id" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Order Date</p>
+                                <p id="order-date" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Status</p>
+                                <p id="order-status" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Total Amount</p>
+                                <p id="order-total" class="font-medium"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h3 class="text-md font-semibold text-gray-800 mb-3">Order Items</h3>
+                            <div id="order-items-container" class="border rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="order-items-list" class="bg-white divide-y divide-gray-200">
+                                        <!-- Order items will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-800">Customer Information</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-500">Customer ID</p>
+                            <p id="customer-id" class="font-medium"></p>
+                        </div>
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-500">Name</p>
+                            <p id="customer-name" class="font-medium"></p>
+                        </div>
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-500">Email</p>
+                            <p id="customer-email" class="font-medium"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Phone</p>
+                            <p id="customer-phone" class="font-medium"></p>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <a id="view-customer-link" href="#" class="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                View Customer Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Actions -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-800">Order Actions</h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="order-actions" class="space-y-3">
+                            <!-- Actions will be dynamically added based on order status -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="no-order-message" class="bg-white shadow-md rounded-lg p-6 text-center hidden">
+        <p class="text-gray-500">Order not found or has been deleted.</p>
+    </div>
+</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="{% static 'js/firebase-config.js' %}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Firebase should already be initialized in firebase-config.js
+    // Use the global db variable
+    
+    // Elements
+    const orderLoading = document.getElementById('order-loading');
+    const orderDetailContainer = document.getElementById('order-detail-container');
+    const noOrderMessage = document.getElementById('no-order-message');
+    
+    // Order details elements
+    const orderId = document.getElementById('order-id');
+    const orderDate = document.getElementById('order-date');
+    const orderStatus = document.getElementById('order-status');
+    const orderTotal = document.getElementById('order-total');
+    const orderItemsList = document.getElementById('order-items-list');
+    
+    // Customer details elements
+    const customerId = document.getElementById('customer-id');
+    const customerName = document.getElementById('customer-name');
+    const customerEmail = document.getElementById('customer-email');
+    const customerPhone = document.getElementById('customer-phone');
+    const viewCustomerLink = document.getElementById('view-customer-link');
+    
+    // Order actions container
+    const orderActions = document.getElementById('order-actions');
+    
+    // Get order ID from URL
+    const orderIdFromUrl = '{{ order_id }}';
+    
+    // Load order data
+    function loadOrderData() {
+        // Show loading
+        orderLoading.classList.remove('hidden');
+        orderDetailContainer.classList.add('hidden');
+        noOrderMessage.classList.add('hidden');
+        
+        // Get order data from Firestore
+        db.collection('orders').doc(orderIdFromUrl).get()
+            .then(doc => {
+                // Hide loading
+                orderLoading.classList.add('hidden');
+                
+                if (!doc.exists) {
+                    noOrderMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                // Get order data
+                const order = doc.data();
+                order.id = doc.id;
+                
+                // Show order details
+                orderDetailContainer.classList.remove('hidden');
+                renderOrderDetails(order);
+                
+                // Load customer data
+                if (order.userId) {
+                    loadCustomerData(order.userId);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading order:', error);
+                orderLoading.classList.add('hidden');
+                noOrderMessage.classList.remove('hidden');
+                noOrderMessage.querySelector('p').textContent = 'Error loading order data.';
+            });
+    }
+    
+    // Render order details
+    function renderOrderDetails(order) {
+        // Set basic order details
+        orderId.textContent = order.id;
+        
+        // Format date
+        let formattedDate = 'Unknown date';
+        if (order.createdAt && order.createdAt.toDate) {
+            formattedDate = order.createdAt.toDate().toLocaleString();
+        } else if (order.createdAt && order.createdAt.seconds) {
+            formattedDate = new Date(order.createdAt.seconds * 1000).toLocaleString();
+        }
+        orderDate.textContent = formattedDate;
+        
+        // Set status with color
+        const statusText = order.status || 'Unknown';
+        const statusClass = getStatusColorClass(statusText);
+        orderStatus.innerHTML = `<span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">${statusText}</span>`;
+        
+        // Calculate and set total
+        let total = 0;
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const price = parseFloat(item.price || 0);
+                const quantity = parseInt(item.quantity || 1);
+                total += price * quantity;
+            });
+        } else if (order.totalAmount) {
+            total = parseFloat(order.totalAmount);
+        }
+        orderTotal.textContent = `${total.toFixed(2)} ETB`;
+        
+        // Render order items
+        renderOrderItems(order.items || []);
+        
+        // Render order actions based on status
+        renderOrderActions(order);
+    }
+    
+    // Render order items
+    function renderOrderItems(items) {
+        // Clear previous items
+        orderItemsList.innerHTML = '';
+        
+        if (!items.length) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = `
+                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No items found for this order.
+                </td>
+            `;
+            orderItemsList.appendChild(emptyRow);
+            return;
+        }
+        
+        // Add each item to the table
+        items.forEach(item => {
+            const price = parseFloat(item.price || 0);
+            const quantity = parseInt(item.quantity || 1);
+            const subtotal = price * quantity;
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${item.name || 'Unknown Product'}</div>
+                            <div class="text-sm text-gray-500">${item.productId ? item.productId.substring(0, 8) + '...' : 'N/A'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${price.toFixed(2)} ETB</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${quantity}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${subtotal.toFixed(2)} ETB</td>
+            `;
+            orderItemsList.appendChild(row);
+        });
+    }
+    
+    // Load customer data
+    function loadCustomerData(userId) {
+        db.collection('users').doc(userId).get()
+            .then(doc => {
+                if (!doc.exists) {
+                    console.log('Customer not found');
+                    return;
+                }
+                
+                const customer = doc.data();
+                customer.id = doc.id;
+                
+                // Set customer details
+                customerId.textContent = customer.id;
+                customerName.textContent = customer.displayName || 'N/A';
+                customerEmail.textContent = customer.email || 'N/A';
+                customerPhone.textContent = customer.phoneNumber || 'N/A';
+                
+                // Set customer profile link
+                viewCustomerLink.href = `{% url 'admin_dashboard:user_detail' user_id='placeholder' %}`.replace('placeholder', customer.id);
+            })
+            .catch(error => {
+                console.error('Error loading customer:', error);
+            });
+    }
+    
+    // Render order actions based on status
+    function renderOrderActions(order) {
+        // Clear previous actions
+        orderActions.innerHTML = '';
+        
+        const status = (order.status || '').toLowerCase();
+        
+        if (status === 'pending') {
+            // Add process order button
+            const processBtn = document.createElement('button');
+            processBtn.className = 'w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium';
+            processBtn.textContent = 'Process Order';
+            processBtn.addEventListener('click', () => processOrder(order.id));
+            orderActions.appendChild(processBtn);
+            
+            // Add cancel order button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium';
+            cancelBtn.textContent = 'Cancel Order';
+            cancelBtn.addEventListener('click', () => cancelOrder(order.id));
+            orderActions.appendChild(cancelBtn);
+        } else if (status === 'processing') {
+            // Add complete order button
+            const completeBtn = document.createElement('button');
+            completeBtn.className = 'w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium';
+            completeBtn.textContent = 'Mark as Completed';
+            completeBtn.addEventListener('click', () => completeOrder(order.id));
+            orderActions.appendChild(completeBtn);
+        } else {
+            // Add message for completed or cancelled orders
+            const message = document.createElement('p');
+            message.className = 'text-sm text-gray-500 text-center';
+            message.textContent = `This order is ${status}. No actions available.`;
+            orderActions.appendChild(message);
+        }
+    }
+    
+    // Process order
+    function processOrder(orderId) {
+        if (!confirm('Are you sure you want to process this order?')) return;
+        
+        db.collection('orders').doc(orderId).update({
+            status: 'processing',
+            updatedAt: new Date()
+        })
+        .then(() => {
+            alert('Order status updated to Processing');
+            loadOrderData(); // Reload order data
+        })
+        .catch(error => {
+            console.error('Error updating order:', error);
+            alert('Error updating order status');
+        });
+    }
+    
+    // Cancel order
+    function cancelOrder(orderId) {
+        if (!confirm('Are you sure you want to cancel this order?')) return;
+        
+        db.collection('orders').doc(orderId).update({
+            status: 'cancelled',
+            updatedAt: new Date()
+        })
+        .then(() => {
+            alert('Order has been cancelled');
+            loadOrderData(); // Reload order data
+        })
+        .catch(error => {
+            console.error('Error cancelling order:', error);
+            alert('Error cancelling order');
+        });
+    }
+    
+    // Complete order
+    function completeOrder(orderId) {
+        if (!confirm('Are you sure you want to mark this order as completed?')) return;
+        
+        db.collection('orders').doc(orderId).update({
+            status: 'completed',
+            updatedAt: new Date()
+        })
+        .then(() => {
+            alert('Order has been completed');
+            loadOrderData(); // Reload order data
+        })
+        .catch(error => {
+            console.error('Error completing order:', error);
+            alert('Error completing order');
+        });
+    }
+    
+    // Get status color class
+    function getStatusColorClass(status) {
+        if (!status) return 'bg-gray-100 text-gray-800';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'processing':
+                return 'bg-blue-100 text-blue-800';
+            case 'completed':
+            case 'delivered':
+                return 'bg-green-100 text-green-800';
+            case 'cancelled':
+            case 'failed':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
+    // Load order data on page load
+    loadOrderData();
+});
+</script>
+{% endblock %}

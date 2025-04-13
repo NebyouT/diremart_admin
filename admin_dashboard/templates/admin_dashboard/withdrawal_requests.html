@@ -1,0 +1,641 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Withdrawal Requests{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Withdrawal Requests</h1>
+        <a href="{% url 'admin_dashboard:dashboard' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <div id="withdrawal-loading" class="flex justify-center items-center py-8">
+        <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-3 text-lg text-gray-600">Loading withdrawal requests...</span>
+    </div>
+
+    <div id="withdrawal-container" class="hidden">
+        <!-- Filters -->
+        <div class="mb-6 bg-white p-4 rounded-lg shadow-md">
+            <div class="flex flex-wrap gap-4 items-center">
+                <div>
+                    <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="date-filter" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                    <select id="date-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+                <div class="ml-auto self-end">
+                    <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Withdrawal Requests Table -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Details</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="withdrawal-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Withdrawal requests will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="no-withdrawals-message" class="p-6 text-center hidden">
+                <p class="text-gray-500">No withdrawal requests found.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div id="approve-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Approve Withdrawal Request</h3>
+        <p class="mb-4">Are you sure you want to approve this withdrawal request?</p>
+        <div class="bg-gray-50 p-3 rounded-lg mb-4">
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <p class="text-sm text-gray-500">Amount:</p>
+                    <p id="approve-amount" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">User:</p>
+                    <p id="approve-user" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Bank:</p>
+                    <p id="approve-bank" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Account:</p>
+                    <p id="approve-account" class="font-medium"></p>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button id="approve-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+            <button id="approve-confirm" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Approve</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="reject-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Reject Withdrawal Request</h3>
+        <p class="mb-4">Please specify the reason for rejecting this withdrawal request:</p>
+        <div class="mb-4">
+            <select id="reject-reason" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                <option value="inaccurate_information">Inaccurate Information</option>
+                <option value="not_eligible">Not Eligible</option>
+                <option value="suspicious_activity">Suspicious Activity</option>
+                <option value="insufficient_funds">Insufficient Funds</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div id="other-reason-container" class="mb-4 hidden">
+            <label for="other-reason" class="block text-sm font-medium text-gray-700 mb-1">Specify Reason</label>
+            <textarea id="other-reason" rows="3" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></textarea>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button id="reject-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+            <button id="reject-confirm" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Reject</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="{% static 'js/firebase-config.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Firebase should already be initialized in firebase-config.js
+    // Use the global db variable
+    
+    // Check if there's a specific withdrawal_id in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const specificWithdrawalId = urlParams.get('withdrawal_id');
+    
+    // Elements
+    const withdrawalLoading = document.getElementById('withdrawal-loading');
+    const withdrawalContainer = document.getElementById('withdrawal-container');
+    const withdrawalTableBody = document.getElementById('withdrawal-table-body');
+    const noWithdrawalsMessage = document.getElementById('no-withdrawals-message');
+    const statusFilter = document.getElementById('status-filter');
+    const dateFilter = document.getElementById('date-filter');
+    const refreshBtn = document.getElementById('refresh-btn');
+    
+    // Modal elements
+    const approveModal = document.getElementById('approve-modal');
+    const approveAmount = document.getElementById('approve-amount');
+    const approveUser = document.getElementById('approve-user');
+    const approveBank = document.getElementById('approve-bank');
+    const approveAccount = document.getElementById('approve-account');
+    const approveCancel = document.getElementById('approve-cancel');
+    const approveConfirm = document.getElementById('approve-confirm');
+    
+    const rejectModal = document.getElementById('reject-modal');
+    const rejectReason = document.getElementById('reject-reason');
+    const otherReasonContainer = document.getElementById('other-reason-container');
+    const otherReason = document.getElementById('other-reason');
+    const rejectCancel = document.getElementById('reject-cancel');
+    const rejectConfirm = document.getElementById('reject-confirm');
+    
+    // Current withdrawal being processed
+    let currentWithdrawal = null;
+    
+    // Load withdrawal requests
+    function loadWithdrawalRequests() {
+        withdrawalLoading.classList.remove('hidden');
+        withdrawalContainer.classList.add('hidden');
+        noWithdrawalsMessage.classList.add('hidden');
+        
+        // Check if we need to load a specific withdrawal
+        if (specificWithdrawalId) {
+            // Load just the specific withdrawal request
+            db.collection('withdrawal_requests').doc(specificWithdrawalId).get()
+                .then(doc => {
+                    withdrawalLoading.classList.add('hidden');
+                    withdrawalContainer.classList.remove('hidden');
+                    
+                    if (!doc.exists) {
+                        noWithdrawalsMessage.classList.remove('hidden');
+                        noWithdrawalsMessage.querySelector('p').textContent = 'Withdrawal request not found.';
+                        return;
+                    }
+                    
+                    // Get the withdrawal data
+                    const withdrawal = doc.data();
+                    withdrawal.id = doc.id;
+                    
+                    // Show the withdrawal details in a modal or redirect to detail page
+                    showWithdrawalDetails(withdrawal);
+                })
+                .catch(error => {
+                    console.error('Error loading specific withdrawal:', error);
+                    withdrawalLoading.classList.add('hidden');
+                    withdrawalContainer.classList.remove('hidden');
+                    noWithdrawalsMessage.classList.remove('hidden');
+                    noWithdrawalsMessage.querySelector('p').textContent = 'Error loading withdrawal request.';
+                });
+            return;
+        }
+        
+        // Get filters for regular list view
+        const status = statusFilter.value;
+        const dateRange = dateFilter.value;
+        
+        // Build query
+        let query = db.collection('withdrawal_requests');
+        
+        // Apply status filter
+        if (status !== 'all') {
+            query = query.where('status', '==', status);
+        }
+        
+        // Apply date filter
+        if (dateRange !== 'all') {
+            const now = new Date();
+            let startDate = new Date();
+            
+            if (dateRange === 'today') {
+                startDate.setHours(0, 0, 0, 0);
+            } else if (dateRange === 'week') {
+                startDate.setDate(now.getDate() - 7);
+            } else if (dateRange === 'month') {
+                startDate.setMonth(now.getMonth() - 1);
+            }
+            
+            query = query.where('createdAt', '>=', startDate);
+        }
+        
+        // Order by date
+        query = query.orderBy('createdAt', 'desc');
+        
+        // Execute query
+        query.get()
+            .then(snapshot => {
+                withdrawalLoading.classList.add('hidden');
+                withdrawalContainer.classList.remove('hidden');
+                
+                if (snapshot.empty) {
+                    noWithdrawalsMessage.classList.remove('hidden');
+                    withdrawalTableBody.innerHTML = '';
+                    return;
+                }
+                
+                // Clear table
+                withdrawalTableBody.innerHTML = '';
+                
+                // Process results
+                snapshot.forEach(doc => {
+                    const withdrawal = doc.data();
+                    withdrawal.id = doc.id;
+                    renderWithdrawalRow(withdrawal);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading withdrawal requests:', error);
+                withdrawalLoading.classList.add('hidden');
+                withdrawalContainer.classList.remove('hidden');
+                noWithdrawalsMessage.classList.remove('hidden');
+                withdrawalTableBody.innerHTML = '';
+            });
+    }
+    
+    // Render a withdrawal request row
+    function renderWithdrawalRow(withdrawal) {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 cursor-pointer';
+        
+        // Format date
+        let createdDate = 'Unknown date';
+        if (withdrawal.createdAt && withdrawal.createdAt.toDate) {
+            createdDate = withdrawal.createdAt.toDate().toLocaleString();
+        } else if (withdrawal.createdAt && withdrawal.createdAt.seconds) {
+            createdDate = new Date(withdrawal.createdAt.seconds * 1000).toLocaleString();
+        }
+        
+        // Get bank details
+        let accountNumber = 'Not provided';
+        let fullName = 'Not provided';
+        let method = 'Not specified';
+        
+        if (withdrawal.bankDetails) {
+            accountNumber = withdrawal.bankDetails.accountNumber || accountNumber;
+            fullName = withdrawal.bankDetails.fullName || withdrawal.bankDetails.accountName || fullName;
+        }
+        
+        if (withdrawal.encryptedDetails) {
+            method = withdrawal.encryptedDetails.method || method;
+        }
+        
+        // Create action buttons based on status
+        let actionButtons = '';
+        if (withdrawal.status && withdrawal.status.toLowerCase() === 'pending') {
+            actionButtons = `
+                <button class="approve-btn bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded text-sm mr-2" 
+                        data-id="${withdrawal.id}">
+                    Approve
+                </button>
+                <button class="reject-btn bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-sm" 
+                        data-id="${withdrawal.id}">
+                    Reject
+                </button>
+            `;
+        } else {
+            actionButtons = `
+                <span class="text-sm text-gray-500">No actions available</span>
+            `;
+        }
+        
+        // Render row
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${withdrawal.id.substring(0, 8)}...</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${withdrawal.userId.substring(0, 8)}...</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${withdrawal.amount} ETB</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div>
+                    <p><strong>${method.toUpperCase()}</strong></p>
+                    <p>Acc: ${accountNumber}</p>
+                    <p>Name: ${fullName}</p>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${createdDate}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(withdrawal.status)}">
+                    ${withdrawal.status || 'Unknown'}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${actionButtons}
+            </td>
+        `;
+        
+        withdrawalTableBody.appendChild(row);
+        
+        // Make the entire row clickable to navigate to detail page
+        row.addEventListener('click', function(event) {
+            // Only navigate if the click wasn't on a button
+            if (!event.target.closest('button')) {
+                // Navigate to the withdrawal detail view using the correct URL pattern
+                window.location.href = `{% url 'admin_dashboard:withdrawal_detail' withdrawal_id='placeholder' %}`.replace('placeholder', withdrawal.id);
+            }
+        });
+        
+        // Add event listeners to action buttons
+        if (withdrawal.status && withdrawal.status.toLowerCase() === 'pending') {
+            const approveBtn = row.querySelector('.approve-btn');
+            const rejectBtn = row.querySelector('.reject-btn');
+            
+            if (approveBtn) {
+                approveBtn.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent row click
+                    showApproveModal(withdrawal);
+                });
+            }
+            
+            if (rejectBtn) {
+                rejectBtn.addEventListener('click', function(event) {
+                    event.stopPropagation(); // Prevent row click
+                    showRejectModal(withdrawal);
+                });
+            }
+        }
+    }
+    
+    // Show approve modal
+    function showApproveModal(withdrawal) {
+        currentWithdrawal = withdrawal;
+        
+        // Set modal content
+        approveAmount.textContent = `${withdrawal.amount} ETB`;
+        approveUser.textContent = withdrawal.userId.substring(0, 8) + '...';
+        
+        let method = 'Not specified';
+        if (withdrawal.encryptedDetails && withdrawal.encryptedDetails.method) {
+            method = withdrawal.encryptedDetails.method.toUpperCase();
+        }
+        approveBank.textContent = method;
+        
+        let accountNumber = 'Not provided';
+        if (withdrawal.bankDetails && withdrawal.bankDetails.accountNumber) {
+            accountNumber = withdrawal.bankDetails.accountNumber;
+        }
+        approveAccount.textContent = accountNumber;
+        
+        // Show modal
+        approveModal.classList.remove('hidden');
+    }
+    
+    // Show reject modal
+    function showRejectModal(withdrawal) {
+        currentWithdrawal = withdrawal;
+        
+        // Reset form
+        rejectReason.value = 'inaccurate_information';
+        otherReason.value = '';
+        otherReasonContainer.classList.add('hidden');
+        
+        // Show modal
+        rejectModal.classList.remove('hidden');
+    }
+    
+    // Process withdrawal approval
+    function approveWithdrawal() {
+        if (!currentWithdrawal) return;
+        
+        // Show loading
+        approveConfirm.disabled = true;
+        approveConfirm.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+        `;
+        
+        // Update withdrawal status in Firestore
+        const withdrawalRef = db.collection('withdrawal_requests').doc(currentWithdrawal.id);
+        
+        // Use a simple object with seconds and nanoseconds for timestamp
+        // This is compatible with Firestore's timestamp format
+        const now = new Date();
+        const approvalTimestamp = {
+            seconds: Math.floor(now.getTime() / 1000),
+            nanoseconds: now.getMilliseconds() * 1000000
+        };
+        
+        withdrawalRef.update({
+            status: 'completed',
+            updatedAt: approvalTimestamp,
+            processingNotes: 'Approved by administrator'
+        })
+        .then(() => {
+            // Hide modal
+            approveModal.classList.add('hidden');
+            approveConfirm.disabled = false;
+            approveConfirm.textContent = 'Approve';
+            
+            // Show success message
+            alert('Withdrawal request approved successfully');
+            
+            // Reload withdrawal requests
+            loadWithdrawalRequests();
+        })
+        .catch(error => {
+            console.error('Error approving withdrawal:', error);
+            
+            // Hide modal
+            approveModal.classList.add('hidden');
+            approveConfirm.disabled = false;
+            approveConfirm.textContent = 'Approve';
+            
+            // Show error message
+            alert(`Error approving withdrawal: ${error.message}`);
+        });
+    }
+    
+    // Process withdrawal rejection
+    function rejectWithdrawal() {
+        if (!currentWithdrawal) return;
+        
+        // Get reason
+        let reason = rejectReason.value;
+        if (reason === 'other') {
+            reason = otherReason.value.trim();
+            if (!reason) {
+                alert('Please specify a reason for rejection');
+                return;
+            }
+        } else {
+            // Convert reason code to readable text
+            if (reason === 'inaccurate_information') {
+                reason = 'Inaccurate Information';
+            } else if (reason === 'not_eligible') {
+                reason = 'Not Eligible';
+            } else if (reason === 'suspicious_activity') {
+                reason = 'Suspicious Activity';
+            } else if (reason === 'insufficient_funds') {
+                reason = 'Insufficient Funds';
+            }
+        }
+        
+        // Show loading
+        rejectConfirm.disabled = true;
+        rejectConfirm.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+        `;
+        
+        // Get user wallet
+        const userId = currentWithdrawal.userId;
+        const walletRef = db.collection('wallets').where('userId', '==', userId);
+        
+        walletRef.get()
+            .then(snapshot => {
+                if (snapshot.empty) {
+                    throw new Error('User wallet not found');
+                }
+                
+                // Get the first wallet document
+                const walletDoc = snapshot.docs[0];
+                const wallet = walletDoc.data();
+                const currentBalance = parseFloat(wallet.balance || 0);
+                const refundAmount = parseFloat(currentWithdrawal.amount || 0);
+                
+                // Update wallet balance
+                // Use a simple object with seconds and nanoseconds for timestamp
+                // This is compatible with Firestore's timestamp format
+                const now = new Date();
+                const timestamp = {
+                    seconds: Math.floor(now.getTime() / 1000),
+                    nanoseconds: now.getMilliseconds() * 1000000
+                };
+                
+                return db.collection('wallets').doc(walletDoc.id).update({
+                    balance: currentBalance + refundAmount,
+                    updatedAt: timestamp
+                });
+            })
+            .then(() => {
+                // Update withdrawal status
+                // Use a simple object with seconds and nanoseconds for timestamp
+                // This is compatible with Firestore's timestamp format
+                const now = new Date();
+                const statusTimestamp = {
+                    seconds: Math.floor(now.getTime() / 1000),
+                    nanoseconds: now.getMilliseconds() * 1000000
+                };
+                
+                return db.collection('withdrawal_requests').doc(currentWithdrawal.id).update({
+                    status: 'rejected',
+                    updatedAt: statusTimestamp,
+                    processingNotes: `Rejected: ${reason}`,
+                    rejectionReason: reason
+                });
+            })
+            .then(() => {
+                // Hide modal
+                rejectModal.classList.add('hidden');
+                rejectConfirm.disabled = false;
+                rejectConfirm.textContent = 'Reject';
+                
+                // Show success message
+                alert('Withdrawal request rejected and funds returned to user wallet');
+                
+                // Reload withdrawal requests
+                loadWithdrawalRequests();
+            })
+            .catch(error => {
+                console.error('Error rejecting withdrawal:', error);
+                
+                // Hide modal
+                rejectModal.classList.add('hidden');
+                rejectConfirm.disabled = false;
+                rejectConfirm.textContent = 'Reject';
+                
+                // Show error message
+                alert(`Error rejecting withdrawal: ${error.message}`);
+            });
+    }
+    
+    // Helper function to get status badge color
+    function getStatusBadgeColor(status) {
+        if (!status) return 'bg-gray-100 text-gray-800';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'completed':
+            case 'success':
+                return 'bg-green-100 text-green-800';
+            case 'rejected':
+                return 'bg-red-100 text-red-800';
+            case 'failed':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
+    // Show details for a specific withdrawal
+    function showWithdrawalDetails(withdrawal) {
+        // Navigate to the withdrawal detail view using the correct URL pattern
+        window.location.href = `{% url 'admin_dashboard:withdrawal_detail' withdrawal_id='placeholder' %}`.replace('placeholder', withdrawal.id);
+    }
+    
+    // Event listeners
+    refreshBtn.addEventListener('click', loadWithdrawalRequests);
+    statusFilter.addEventListener('change', loadWithdrawalRequests);
+    dateFilter.addEventListener('change', loadWithdrawalRequests);
+    
+    // Modal event listeners
+    approveCancel.addEventListener('click', () => {
+        approveModal.classList.add('hidden');
+        currentWithdrawal = null;
+    });
+    
+    approveConfirm.addEventListener('click', approveWithdrawal);
+    
+    rejectCancel.addEventListener('click', () => {
+        rejectModal.classList.add('hidden');
+        currentWithdrawal = null;
+    });
+    
+    rejectConfirm.addEventListener('click', rejectWithdrawal);
+    
+    rejectReason.addEventListener('change', () => {
+        if (rejectReason.value === 'other') {
+            otherReasonContainer.classList.remove('hidden');
+        } else {
+            otherReasonContainer.classList.add('hidden');
+        }
+    });
+    
+    // Load withdrawal requests on page load
+    loadWithdrawalRequests();
+});
+</script>
+{% endblock %}

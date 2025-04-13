@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Product
+from .chapa_utils import process_withdrawal
 import json
 
 def login_view(request):
@@ -74,6 +76,11 @@ def order_list(request):
     return render(request, 'admin_dashboard/order_list.html')
 
 @auth_required
+def order_detail(request, order_id):
+    # Order details are loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/order_detail.html', {'order_id': order_id})
+
+@auth_required
 def user_list(request):
     # Users are loaded directly from Firebase in the template
     return render(request, 'admin_dashboard/user_list.html')
@@ -82,3 +89,99 @@ def user_list(request):
 def user_detail(request, user_id):
     # User details are loaded directly from Firebase in the template
     return render(request, 'admin_dashboard/user_detail.html', {'user_id': user_id})
+
+@auth_required
+def withdrawal_requests(request):
+    # Withdrawal requests are loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/withdrawal_requests.html')
+
+@auth_required
+def withdrawal_detail(request, withdrawal_id):
+    # Withdrawal details are loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/withdrawal_detail.html', {'withdrawal_id': withdrawal_id})
+
+@auth_required
+def wallet_manager(request):
+    # Wallet balances are loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/wallet_manager.html')
+
+@auth_required
+def wallet_transactions(request, wallet_id):
+    # Wallet transaction history is loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/wallet_transactions.html', {'wallet_id': wallet_id})
+
+@auth_required
+def all_transactions(request):
+    # All transactions are loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/all_transactions.html')
+
+@auth_required
+def customer_support(request):
+    # Customer support dashboard is loaded directly from Firebase in the template
+    return render(request, 'admin_dashboard/customer_support.html')
+
+@auth_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def process_withdrawal_request(request):
+    """Process a withdrawal request (approve or reject)"""
+    try:
+        # Log the raw request for debugging
+        print(f"Received withdrawal request: {request.body}")
+        
+        data = json.loads(request.body)
+        withdrawal_id = data.get('withdrawalId') or data.get('requestId')  # Support both parameter names
+        action = data.get('action')
+        reason = data.get('reason', 'Not specified')
+        
+        # Log the parsed data
+        print(f"Parsed data: withdrawal_id={withdrawal_id}, action={action}, reason={reason}")
+        
+        if not withdrawal_id or not action:
+            return JsonResponse({
+                'success': False,
+                'message': 'Missing required parameters'
+            }, status=400)
+        
+        # We're not using server-side Firebase operations or Chapa API
+        # Just return success response for client-side processing
+        
+        if action == 'approve':
+            return JsonResponse({
+                'success': True,
+                'message': 'Withdrawal request approved successfully',
+                'data': {
+                    'withdrawalId': withdrawal_id,
+                    'action': action,
+                    'status': 'completed'
+                }
+            })
+        elif action == 'reject':
+            return JsonResponse({
+                'success': True,
+                'message': 'Withdrawal request rejected successfully',
+                'data': {
+                    'withdrawalId': withdrawal_id,
+                    'action': action,
+                    'status': 'rejected',
+                    'reason': reason
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f'Invalid action: {action}'
+            }, status=400)
+            
+    except json.JSONDecodeError as json_error:
+        print(f"JSON decode error: {str(json_error)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Invalid JSON in request: {str(json_error)}'
+        }, status=400)
+    except Exception as e:
+        print(f"Unexpected error in process_withdrawal_request: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error processing withdrawal request: {str(e)}'
+        }, status=500)

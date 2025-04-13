@@ -1,0 +1,467 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Wallet Manager{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">Wallet Manager</h1>
+    
+    <!-- Search and Filter -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex-1 min-w-[300px]">
+                <input type="text" id="searchInput" placeholder="Search by user ID, email or name..." 
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex gap-2">
+                <button id="refreshButton" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Wallets List -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort="userId">
+                            User ID
+                            <span class="sort-icon ml-1">↕</span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort="email">
+                            Email
+                            <span class="sort-icon ml-1">↕</span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort="balance">
+                            Balance
+                            <span class="sort-icon ml-1">↕</span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" data-sort="updatedAt">
+                            Last Updated
+                            <span class="sort-icon ml-1">↕</span>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="walletsTableBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Wallet data will be loaded here -->
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            Loading wallet data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- No Results Message -->
+    <div id="noResults" class="hidden mt-4 p-4 bg-yellow-50 rounded-lg text-yellow-700 text-center">
+        No wallets found matching your search criteria.
+    </div>
+    
+    <!-- Edit Wallet Modal -->
+    <div id="editWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium">Edit Wallet Balance</h3>
+                    <button id="closeEditModal" class="text-gray-400 hover:text-gray-500">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-500 mb-1">User ID:</p>
+                    <p id="editUserId" class="font-medium"></p>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-500 mb-1">Email:</p>
+                    <p id="editEmail" class="font-medium"></p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editBalance" class="block text-sm font-medium text-gray-700 mb-1">Current Balance:</label>
+                    <input type="number" id="editBalance" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" step="0.01">
+                    <p class="text-sm text-gray-500 mt-1">Enter the new balance amount</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="editNotes" class="block text-sm font-medium text-gray-700 mb-1">Notes:</label>
+                    <textarea id="editNotes" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Reason for balance adjustment..."></textarea>
+                </div>
+                
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="cancelEdit" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md">
+                        Cancel
+                    </button>
+                    <button id="saveBalance" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="{% static 'js/firebase-config.js' %}"></script>
+
+<script>
+    // Global variables
+    let wallets = [];
+    let currentWallet = null;
+    let currentSort = { field: 'updatedAt', direction: 'desc' };
+    
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const refreshButton = document.getElementById('refreshButton');
+    const walletsTableBody = document.getElementById('walletsTableBody');
+    const noResults = document.getElementById('noResults');
+    const editWalletModal = document.getElementById('editWalletModal');
+    const closeEditModal = document.getElementById('closeEditModal');
+    const cancelEdit = document.getElementById('cancelEdit');
+    const editUserId = document.getElementById('editUserId');
+    const editEmail = document.getElementById('editEmail');
+    const editBalance = document.getElementById('editBalance');
+    const editNotes = document.getElementById('editNotes');
+    const saveBalance = document.getElementById('saveBalance');
+    
+    // Load wallets from Firestore
+    function loadWallets() {
+        // Show loading state
+        walletsTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                    <svg class="animate-spin h-5 w-5 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading wallet data...
+                </td>
+            </tr>
+        `;
+        
+        // Query Firestore for wallets
+        firebase.firestore().collection('wallets')
+            .get()
+            .then(snapshot => {
+                wallets = [];
+                
+                if (snapshot.empty) {
+                    walletsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                No wallet data found
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // Process wallet data
+                snapshot.forEach(doc => {
+                    const wallet = doc.data();
+                    wallet.id = doc.id;
+                    
+                    // Ensure wallet has all required fields
+                    wallet.balance = wallet.balance || 0;
+                    wallet.userId = wallet.userId || 'Unknown';
+                    wallet.email = wallet.email || 'No email';
+                    
+                    // Format timestamp if available
+                    if (wallet.updatedAt) {
+                        const timestamp = wallet.updatedAt.seconds ? 
+                            new Date(wallet.updatedAt.seconds * 1000) : 
+                            new Date();
+                        wallet.updatedAtFormatted = timestamp.toLocaleString();
+                        wallet.updatedAtRaw = timestamp.getTime();
+                    } else {
+                        wallet.updatedAtFormatted = 'Never';
+                        wallet.updatedAtRaw = 0;
+                    }
+                    
+                    wallets.push(wallet);
+                });
+                
+                // Sort and render wallets
+                sortWallets();
+                renderWallets();
+            })
+            .catch(error => {
+                console.error('Error loading wallets:', error);
+                walletsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-red-500">
+                            Error loading wallet data: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    // Render wallets to the table
+    function renderWallets() {
+        const filteredWallets = filterWallets();
+        
+        if (filteredWallets.length === 0) {
+            walletsTableBody.innerHTML = '';
+            noResults.classList.remove('hidden');
+            return;
+        }
+        
+        noResults.classList.add('hidden');
+        
+        // Generate table rows
+        const rows = filteredWallets.map(wallet => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${wallet.userId}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${wallet.email}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium ${parseFloat(wallet.balance) > 0 ? 'text-green-600' : 'text-gray-900'}">
+                        ${parseFloat(wallet.balance).toFixed(2)} ETB
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">${wallet.updatedAtFormatted}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button class="edit-wallet text-blue-600 hover:text-blue-900 mr-3" data-id="${wallet.id}">
+                        Edit
+                    </button>
+                    <button class="view-transactions text-green-600 hover:text-green-900" data-id="${wallet.id}">
+                        Transactions
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        walletsTableBody.innerHTML = rows;
+        
+        // Add event listeners to edit buttons
+        document.querySelectorAll('.edit-wallet').forEach(button => {
+            button.addEventListener('click', () => openEditModal(button.dataset.id));
+        });
+        
+        // Add event listeners to view transaction buttons
+        document.querySelectorAll('.view-transactions').forEach(button => {
+            button.addEventListener('click', () => viewTransactions(button.dataset.id));
+        });
+    }
+    
+    // Filter wallets based on search input
+    function filterWallets() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        
+        if (!searchTerm) {
+            return wallets;
+        }
+        
+        return wallets.filter(wallet => 
+            (wallet.userId && wallet.userId.toLowerCase().includes(searchTerm)) ||
+            (wallet.email && wallet.email.toLowerCase().includes(searchTerm))
+        );
+    }
+    
+    // Sort wallets based on current sort settings
+    function sortWallets() {
+        wallets.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch (currentSort.field) {
+                case 'userId':
+                    aValue = a.userId || '';
+                    bValue = b.userId || '';
+                    break;
+                case 'email':
+                    aValue = a.email || '';
+                    bValue = b.email || '';
+                    break;
+                case 'balance':
+                    aValue = parseFloat(a.balance || 0);
+                    bValue = parseFloat(b.balance || 0);
+                    break;
+                case 'updatedAt':
+                    aValue = a.updatedAtRaw || 0;
+                    bValue = b.updatedAtRaw || 0;
+                    break;
+                default:
+                    aValue = a.updatedAtRaw || 0;
+                    bValue = b.updatedAtRaw || 0;
+            }
+            
+            // Compare based on direction
+            if (currentSort.direction === 'asc') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+    }
+    
+    // Open edit modal for a wallet
+    function openEditModal(walletId) {
+        currentWallet = wallets.find(w => w.id === walletId);
+        
+        if (!currentWallet) return;
+        
+        // Populate modal fields
+        editUserId.textContent = currentWallet.userId || 'Unknown';
+        editEmail.textContent = currentWallet.email || 'No email';
+        editBalance.value = parseFloat(currentWallet.balance || 0).toFixed(2);
+        editNotes.value = '';
+        
+        // Show modal
+        editWalletModal.classList.remove('hidden');
+    }
+    
+    // Close edit modal
+    function closeModal() {
+        editWalletModal.classList.add('hidden');
+        currentWallet = null;
+    }
+    
+    // Save wallet balance changes
+    function saveWalletBalance() {
+        if (!currentWallet) return;
+        
+        // Validate input
+        const newBalance = parseFloat(editBalance.value);
+        if (isNaN(newBalance)) {
+            alert('Please enter a valid balance amount');
+            return;
+        }
+        
+        const notes = editNotes.value.trim();
+        if (!notes) {
+            alert('Please provide notes explaining the balance adjustment');
+            return;
+        }
+        
+        // Show loading state
+        saveBalance.disabled = true;
+        saveBalance.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Saving...
+        `;
+        
+        // Create timestamp object compatible with Firestore
+        const now = new Date();
+        const timestamp = {
+            seconds: Math.floor(now.getTime() / 1000),
+            nanoseconds: now.getMilliseconds() * 1000000
+        };
+        
+        // Update wallet in Firestore
+        firebase.firestore().collection('wallets').doc(currentWallet.id).update({
+            balance: newBalance,
+            updatedAt: timestamp,
+            lastUpdateNotes: notes,
+            lastUpdateBy: 'admin'
+        })
+        .then(() => {
+            // Create transaction record
+            return firebase.firestore().collection('wallet_transactions').add({
+                walletId: currentWallet.id,
+                userId: currentWallet.userId,
+                previousBalance: parseFloat(currentWallet.balance || 0),
+                newBalance: newBalance,
+                amount: newBalance - parseFloat(currentWallet.balance || 0),
+                type: 'admin_adjustment',
+                notes: notes,
+                createdAt: timestamp,
+                createdBy: 'admin'
+            });
+        })
+        .then(() => {
+            // Close modal and reload wallets
+            closeModal();
+            loadWallets();
+            
+            // Show success message
+            alert('Wallet balance updated successfully');
+        })
+        .catch(error => {
+            console.error('Error updating wallet:', error);
+            alert(`Error updating wallet: ${error.message}`);
+            
+            // Reset button state
+            saveBalance.disabled = false;
+            saveBalance.textContent = 'Save Changes';
+        });
+    }
+    
+    // View transaction history for a wallet
+    function viewTransactions(walletId) {
+        const url = `/admin/wallets/${walletId}/transactions/`;
+        window.location.href = url;
+    }
+    
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load wallets on page load
+        loadWallets();
+        
+        // Search input
+        searchInput.addEventListener('input', renderWallets);
+        
+        // Refresh button
+        refreshButton.addEventListener('click', loadWallets);
+        
+        // Sort headers
+        document.querySelectorAll('th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const field = header.dataset.sort;
+                
+                // Toggle direction if same field, otherwise default to desc
+                if (currentSort.field === field) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.field = field;
+                    currentSort.direction = 'desc';
+                }
+                
+                // Update sort indicators
+                document.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.textContent = '↕';
+                });
+                
+                const sortIcon = header.querySelector('.sort-icon');
+                sortIcon.textContent = currentSort.direction === 'asc' ? '↑' : '↓';
+                
+                // Sort and render
+                sortWallets();
+                renderWallets();
+            });
+        });
+        
+        // Modal close buttons
+        closeEditModal.addEventListener('click', closeModal);
+        cancelEdit.addEventListener('click', closeModal);
+        
+        // Save balance button
+        saveBalance.addEventListener('click', saveWalletBalance);
+    });
+</script>
+{% endblock %}

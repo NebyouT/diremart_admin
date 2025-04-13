@@ -3,6 +3,7 @@
 {% block title %}Dashboard - {{ request.session.user_type|title }}{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="bg-white shadow rounded-lg p-6">
     <h2 class="text-2xl font-bold mb-4">{{ request.session.user_type|title }} Dashboard</h2>
     
@@ -51,6 +52,84 @@
                 </svg>
             </a>
         </div>
+        
+        <div class="bg-pink-100 p-4 rounded-lg transform transition-all duration-300 hover:scale-105">
+            <h3 class="text-lg font-semibold mb-2">Customer Support</h3>
+            <p class="text-sm text-gray-600 mb-2">Chat with customers and manage FAQs</p>
+            <a href="{% url 'admin_dashboard:customer_support' %}" class="text-pink-600 hover:text-pink-800 flex items-center">
+                Support Center
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+    {% elif request.session.user_type == 'wallet' %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-yellow-100 p-4 rounded-lg transform transition-all duration-300 hover:scale-105">
+            <h3 class="text-lg font-semibold mb-2">Wallet Balance</h3>
+            <p class="text-sm text-gray-600 mb-2">View and manage wallet balance</p>
+            <a href="{% url 'admin_dashboard:wallet_manager' %}" class="text-yellow-600 hover:text-yellow-800 flex items-center">
+                View Balance
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+        
+        <div class="bg-indigo-100 p-4 rounded-lg transform transition-all duration-300 hover:scale-105">
+            <h3 class="text-lg font-semibold mb-2">Transactions</h3>
+            <p class="text-sm text-gray-600 mb-2">View transaction history</p>
+            <a href="{% url 'admin_dashboard:all_transactions' %}" class="text-indigo-600 hover:text-indigo-800 flex items-center">
+                View Transactions
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+        
+        <div class="bg-orange-100 p-4 rounded-lg transform transition-all duration-300 hover:scale-105">
+            <h3 class="text-lg font-semibold mb-2">Withdrawal Requests</h3>
+            <p class="text-sm text-gray-600 mb-2">Manage pending withdrawal requests</p>
+            <a href="{% url 'admin_dashboard:withdrawal_requests' %}" class="text-orange-600 hover:text-orange-800 flex items-center" >
+                View Requests
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Withdrawal Requests Section -->
+    <div id="withdrawal-requests-section" class="mt-8 bg-white rounded-lg shadow-md overflow-hidden hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-lg font-medium text-gray-800">Withdrawal Requests</h3>
+            <div>
+                <select id="status-filter" class="text-sm border rounded-md px-2 py-1">
+                    <option value="all">All Requests</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+        <div class="p-4">
+            <div id="withdrawal-requests-loading" class="flex justify-center items-center py-4">
+                <svg class="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="ml-2 text-sm text-gray-600">Loading withdrawal requests...</span>
+            </div>
+            <div id="withdrawal-requests-container" class="hidden">
+                <div id="withdrawal-requests-list" class="divide-y divide-gray-200">
+                    <!-- Withdrawal requests will be inserted here -->
+                </div>
+                <div id="no-withdrawal-requests-message" class="p-6 text-center hidden">
+                    <p class="text-gray-500">No withdrawal requests found.</p>
+                </div>
+            </div>
+        </div>
     </div>
     {% else %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -66,4 +145,371 @@
     </div>
     {% endif %}
 </div>
+
+{% if request.session.user_type == 'wallet' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Firebase (assuming it's already set up in base.html)
+    const db = firebase.firestore();
+    
+    // Elements
+    const viewWithdrawalsBtn = document.getElementById('view-withdrawals-btn');
+    const withdrawalRequestsSection = document.getElementById('withdrawal-requests-section');
+    const withdrawalRequestsLoading = document.getElementById('withdrawal-requests-loading');
+    const withdrawalRequestsContainer = document.getElementById('withdrawal-requests-container');
+    const withdrawalRequestsList = document.getElementById('withdrawal-requests-list');
+    const noWithdrawalRequestsMessage = document.getElementById('no-withdrawal-requests-message');
+    const statusFilter = document.getElementById('status-filter');
+    
+    // All withdrawal requests
+    let allWithdrawalRequests = [];
+    
+    // Toggle withdrawal requests section
+    viewWithdrawalsBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (withdrawalRequestsSection.classList.contains('hidden')) {
+            withdrawalRequestsSection.classList.remove('hidden');
+            loadWithdrawalRequests();
+        } else {
+            withdrawalRequestsSection.classList.add('hidden');
+        }
+    });
+    
+    // Filter withdrawal requests by status
+    statusFilter.addEventListener('change', function() {
+        filterWithdrawalRequests(statusFilter.value);
+    });
+    
+    // Load withdrawal requests from Firestore
+    function loadWithdrawalRequests() {
+        withdrawalRequestsLoading.classList.remove('hidden');
+        withdrawalRequestsContainer.classList.add('hidden');
+        
+        console.log('Loading withdrawal requests...');
+        
+        // Get all withdrawal requests
+        db.collection('withdrawal_requests')
+            .get()
+            .then(snapshot => {
+                withdrawalRequestsLoading.classList.add('hidden');
+                withdrawalRequestsContainer.classList.remove('hidden');
+                
+                if (snapshot.empty) {
+                    console.log('No withdrawal requests found');
+                    noWithdrawalRequestsMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                allWithdrawalRequests = [];
+                snapshot.forEach(doc => {
+                    const request = doc.data();
+                    request.id = doc.id;
+                    allWithdrawalRequests.push(request);
+                });
+                
+                console.log('Found withdrawal requests:', allWithdrawalRequests.length);
+                
+                // Render all requests initially
+                renderWithdrawalRequests(allWithdrawalRequests);
+            })
+            .catch(error => {
+                console.error('Error loading withdrawal requests:', error);
+                withdrawalRequestsLoading.classList.add('hidden');
+                withdrawalRequestsContainer.classList.remove('hidden');
+                noWithdrawalRequestsMessage.classList.remove('hidden');
+            });
+    }
+    
+    // Filter withdrawal requests by status
+    function filterWithdrawalRequests(status) {
+        if (status === 'all') {
+            renderWithdrawalRequests(allWithdrawalRequests);
+            return;
+        }
+        
+        const filteredRequests = allWithdrawalRequests.filter(request => {
+            return request.status?.toLowerCase() === status.toLowerCase();
+        });
+        
+        renderWithdrawalRequests(filteredRequests);
+    }
+    
+    // Render withdrawal requests
+    function renderWithdrawalRequests(requests) {
+        withdrawalRequestsList.innerHTML = '';
+        
+        if (requests.length === 0) {
+            noWithdrawalRequestsMessage.classList.remove('hidden');
+            return;
+        } else {
+            noWithdrawalRequestsMessage.classList.add('hidden');
+        }
+        
+        requests.forEach(request => {
+            const requestItem = document.createElement('div');
+            requestItem.className = 'p-4';
+            
+            // Format date
+            let createdDate = 'Unknown date';
+            if (request.createdAt && request.createdAt.toDate) {
+                createdDate = request.createdAt.toDate().toLocaleString();
+            } else if (request.createdAt && request.createdAt.seconds) {
+                createdDate = new Date(request.createdAt.seconds * 1000).toLocaleString();
+            }
+            
+            // Get bank details
+            let accountNumber = 'Not provided';
+            let fullName = 'Not provided';
+            let phoneNumber = 'Not provided';
+            let method = 'Not specified';
+            
+            if (request.bankDetails) {
+                accountNumber = request.bankDetails.accountNumber || accountNumber;
+                fullName = request.bankDetails.fullName || fullName;
+                phoneNumber = request.bankDetails.phoneNumber || phoneNumber;
+            }
+            
+            if (request.encryptedDetails && request.encryptedDetails.method) {
+                method = request.encryptedDetails.method;
+            }
+            
+            // Get user info
+            const userId = request.userId || 'Unknown';
+            
+            requestItem.innerHTML = `
+                <div class="flex flex-col space-y-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-medium">User ID:</span>
+                            <a href="/admin/users/${userId}/" class="text-blue-600 hover:text-blue-800 ml-1">${userId}</a>
+                        </div>
+                        <span class="${getStatusColor(request.status)} px-2 py-1 rounded-full text-xs">${request.status || 'Unknown'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Amount:</span>
+                        <span>${request.amount || 'Unknown'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Created:</span>
+                        <span>${createdDate}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Method:</span>
+                        <span>${method}</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-200">
+                        <p class="font-medium mb-1">Bank Details:</p>
+                        <div class="text-sm text-gray-600 ml-2">
+                            <p>Account: ${accountNumber}</p>
+                            <p>Name: ${fullName}</p>
+                            <p>Phone: ${phoneNumber}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-200">
+                        <p class="font-medium mb-1">Notes:</p>
+                        <p class="text-sm text-gray-600 ml-2">${request.notes || 'No notes provided'}</p>
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                        ${request.status === 'pending' ? `
+                            <button class="approve-btn bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm" data-id="${request.id}">Approve</button>
+                            <button class="reject-btn bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm" data-id="${request.id}">Reject</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            withdrawalRequestsList.appendChild(requestItem);
+            
+            // Add event listeners to buttons if present
+            const approveBtn = requestItem.querySelector('.approve-btn');
+            const rejectBtn = requestItem.querySelector('.reject-btn');
+            
+            if (approveBtn) {
+                approveBtn.addEventListener('click', function() {
+                    updateWithdrawalStatus(request.id, 'approved');
+                });
+            }
+            
+            if (rejectBtn) {
+                rejectBtn.addEventListener('click', function() {
+                    updateWithdrawalStatus(request.id, 'rejected');
+                });
+            }
+        });
+    }
+    
+    // Update withdrawal request status
+    function updateWithdrawalStatus(requestId, status) {
+        if (!confirm(`Are you sure you want to ${status} this withdrawal request?`)) {
+            return;
+        }
+        
+        // Show processing notification
+        showNotification(`Processing ${status} request...`, 'info');
+        
+        // Get the withdrawal request data
+        const requestData = allWithdrawalRequests.find(r => r.id === requestId);
+        
+        if (status === 'approved') {
+            // For approvals, process the payment through the backend
+            fetch('/process-withdrawal/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    requestId: requestId,
+                    action: 'approve',
+                    withdrawalData: requestData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the Firestore document
+                    return db.collection('withdrawal_requests').doc(requestId).update({
+                        status: status,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        chapaResponse: data.data || {},
+                        processingNotes: 'Processed through Chapa payment gateway'
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to process payment');
+                }
+            })
+            .then(() => {
+                console.log(`Withdrawal request ${requestId} ${status}`);
+                showNotification(`Withdrawal request ${status} and payment processed successfully`, 'success');
+                
+                // Update local data
+                const index = allWithdrawalRequests.findIndex(r => r.id === requestId);
+                if (index !== -1) {
+                    allWithdrawalRequests[index].status = status;
+                    allWithdrawalRequests[index].updatedAt = new Date();
+                    
+                    // Re-filter the list
+                    filterWithdrawalRequests(statusFilter.value);
+                }
+            })
+            .catch(error => {
+                console.error(`Error processing withdrawal:`, error);
+                showNotification(`Failed to process payment: ${error.message}`, 'error');
+            });
+        } else {
+            // For rejections, just update the status in Firestore
+            fetch('/process-withdrawal/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    requestId: requestId,
+                    action: 'reject'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the Firestore document
+                    return db.collection('withdrawal_requests').doc(requestId).update({
+                        status: status,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        processingNotes: 'Rejected by wallet manager'
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to reject request');
+                }
+            })
+            .then(() => {
+                console.log(`Withdrawal request ${requestId} ${status}`);
+                showNotification(`Withdrawal request ${status} successfully`, 'success');
+                
+                // Update local data
+                const index = allWithdrawalRequests.findIndex(r => r.id === requestId);
+                if (index !== -1) {
+                    allWithdrawalRequests[index].status = status;
+                    allWithdrawalRequests[index].updatedAt = new Date();
+                    
+                    // Re-filter the list
+                    filterWithdrawalRequests(statusFilter.value);
+                }
+            })
+            .catch(error => {
+                console.error(`Error updating withdrawal request:`, error);
+                showNotification(`Failed to ${status} withdrawal request: ${error.message}`, 'error');
+            });
+        }
+    }
+    
+    // Helper function to get status color
+    function getStatusColor(status) {
+        switch(status?.toLowerCase()) {
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'approved':
+            case 'completed':
+                return 'bg-green-100 text-green-800';
+            case 'rejected':
+            case 'failed':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    }
+    
+    // Get CSRF token
+    function getCsrfToken() {
+        // Get from the hidden input field
+        const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfInput) {
+            return csrfInput.value;
+        }
+        
+        // Fallback to cookie
+        const csrfCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('csrftoken='));
+        if (csrfCookie) {
+            return csrfCookie.split('=')[1];
+        }
+        
+        // Fallback to meta tag
+        return document.querySelector('meta[name="csrftoken"]')?.getAttribute('content') || '';
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+        const notificationContainer = document.createElement('div');
+        let bgColor = 'bg-green-500';
+        
+        if (type === 'error') {
+            bgColor = 'bg-red-500';
+        } else if (type === 'info') {
+            bgColor = 'bg-blue-500';
+        }
+        
+        notificationContainer.className = `fixed top-4 right-4 z-50 ${bgColor} text-white px-4 py-2 rounded shadow-lg flex items-center`;
+        
+        notificationContainer.innerHTML = `
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                ${type === 'error' 
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
+                }
+            </svg>
+            <span>${message}</span>
+        `;
+        
+        document.body.appendChild(notificationContainer);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notificationContainer.remove();
+        }, 5000);
+    }
+});
+</script>
+{% endif %}
+
 {% endblock %}

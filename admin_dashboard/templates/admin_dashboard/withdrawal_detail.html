@@ -1,0 +1,585 @@
+{% extends 'admin_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Withdrawal Request Detail{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Withdrawal Request Detail</h1>
+        <a href="{% url 'admin_dashboard:withdrawal_requests' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Withdrawals
+        </a>
+    </div>
+
+    <div id="withdrawal-loading" class="flex justify-center items-center py-8">
+        <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="ml-3 text-lg text-gray-600">Loading withdrawal request...</span>
+    </div>
+
+    <div id="withdrawal-container" class="hidden">
+        <!-- Withdrawal Request Details -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-800">Request Information</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-md font-medium text-gray-700 mb-4">Basic Details</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Request ID:</span>
+                                <span id="withdrawal-id" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Amount:</span>
+                                <span id="withdrawal-amount" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Status:</span>
+                                <span id="withdrawal-status" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Created:</span>
+                                <span id="withdrawal-created" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Last Updated:</span>
+                                <span id="withdrawal-updated" class="text-sm font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-md font-medium text-gray-700 mb-4">Bank Details</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Method:</span>
+                                <span id="withdrawal-method" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Account Number:</span>
+                                <span id="withdrawal-account" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Account Name:</span>
+                                <span id="withdrawal-name" class="text-sm font-medium"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">Phone Number:</span>
+                                <span id="withdrawal-phone" class="text-sm font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="text-md font-medium text-gray-700 mb-4">Notes & Processing Information</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-500 mb-1">User Notes:</p>
+                            <p id="withdrawal-notes" class="text-sm"></p>
+                        </div>
+                        <div id="processing-notes-container" class="hidden">
+                            <p class="text-sm text-gray-500 mb-1">Processing Notes:</p>
+                            <p id="withdrawal-processing-notes" class="text-sm"></p>
+                        </div>
+                        <div id="rejection-reason-container" class="hidden">
+                            <p class="text-sm text-gray-500 mb-1">Rejection Reason:</p>
+                            <p id="withdrawal-rejection-reason" class="text-sm font-medium text-red-600"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Information -->
+                <div class="mt-6">
+                    <h3 class="text-md font-medium text-gray-700 mb-4">User Information</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">User ID:</p>
+                                <p id="user-id" class="text-sm"></p>
+                            </div>
+                            <a id="view-user-link" href="#" class="text-blue-500 hover:text-blue-700 text-sm font-medium flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                View User Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Section -->
+        <div id="actions-container" class="bg-white rounded-lg shadow-md overflow-hidden mb-6 hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-800">Actions</h2>
+            </div>
+            <div class="p-6">
+                <div class="flex space-x-4">
+                    <button id="approve-btn" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Approve Withdrawal
+                    </button>
+                    <button id="reject-btn" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        Reject Withdrawal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div id="approve-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Approve Withdrawal Request</h3>
+        <p class="mb-4">Are you sure you want to approve this withdrawal request?</p>
+        <div class="bg-gray-50 p-3 rounded-lg mb-4">
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <p class="text-sm text-gray-500">Amount:</p>
+                    <p id="approve-amount" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">User:</p>
+                    <p id="approve-user" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Bank:</p>
+                    <p id="approve-bank" class="font-medium"></p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Account:</p>
+                    <p id="approve-account" class="font-medium"></p>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button id="approve-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+            <button id="approve-confirm" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Approve</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="reject-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Reject Withdrawal Request</h3>
+        <p class="mb-4">Please specify the reason for rejecting this withdrawal request:</p>
+        <div class="mb-4">
+            <select id="reject-reason" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                <option value="inaccurate_information">Inaccurate Information</option>
+                <option value="not_eligible">Not Eligible</option>
+                <option value="suspicious_activity">Suspicious Activity</option>
+                <option value="insufficient_funds">Insufficient Funds</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div id="other-reason-container" class="mb-4 hidden">
+            <label for="other-reason" class="block text-sm font-medium text-gray-700 mb-1">Specify Reason</label>
+            <textarea id="other-reason" rows="3" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"></textarea>
+        </div>
+        <div class="flex justify-end space-x-3">
+            <button id="reject-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
+            <button id="reject-confirm" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Reject</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="{% static 'js/firebase-config.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Firebase should already be initialized in firebase-config.js
+    // Use the global db variable
+    
+    // Get withdrawal ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const withdrawalId = urlParams.get('id');
+    
+    if (!withdrawalId) {
+        alert('No withdrawal ID provided');
+        window.location.href = "{% url 'admin_dashboard:withdrawal_requests' %}";
+        return;
+    }
+    
+    // Elements
+    const withdrawalLoading = document.getElementById('withdrawal-loading');
+    const withdrawalContainer = document.getElementById('withdrawal-container');
+    const actionsContainer = document.getElementById('actions-container');
+    
+    // Withdrawal details elements
+    const withdrawalIdEl = document.getElementById('withdrawal-id');
+    const withdrawalAmountEl = document.getElementById('withdrawal-amount');
+    const withdrawalStatusEl = document.getElementById('withdrawal-status');
+    const withdrawalCreatedEl = document.getElementById('withdrawal-created');
+    const withdrawalUpdatedEl = document.getElementById('withdrawal-updated');
+    const withdrawalMethodEl = document.getElementById('withdrawal-method');
+    const withdrawalAccountEl = document.getElementById('withdrawal-account');
+    const withdrawalNameEl = document.getElementById('withdrawal-name');
+    const withdrawalPhoneEl = document.getElementById('withdrawal-phone');
+    const withdrawalNotesEl = document.getElementById('withdrawal-notes');
+    const withdrawalProcessingNotesEl = document.getElementById('withdrawal-processing-notes');
+    const processingNotesContainer = document.getElementById('processing-notes-container');
+    const rejectionReasonContainer = document.getElementById('rejection-reason-container');
+    const withdrawalRejectionReasonEl = document.getElementById('withdrawal-rejection-reason');
+    
+    // User elements
+    const userIdEl = document.getElementById('user-id');
+    const viewUserLink = document.getElementById('view-user-link');
+    
+    // Action buttons
+    const approveBtn = document.getElementById('approve-btn');
+    const rejectBtn = document.getElementById('reject-btn');
+    
+    // Modal elements
+    const approveModal = document.getElementById('approve-modal');
+    const approveAmount = document.getElementById('approve-amount');
+    const approveUser = document.getElementById('approve-user');
+    const approveBank = document.getElementById('approve-bank');
+    const approveAccount = document.getElementById('approve-account');
+    const approveCancel = document.getElementById('approve-cancel');
+    const approveConfirm = document.getElementById('approve-confirm');
+    
+    const rejectModal = document.getElementById('reject-modal');
+    const rejectReason = document.getElementById('reject-reason');
+    const otherReasonContainer = document.getElementById('other-reason-container');
+    const otherReason = document.getElementById('other-reason');
+    const rejectCancel = document.getElementById('reject-cancel');
+    const rejectConfirm = document.getElementById('reject-confirm');
+    
+    // Current withdrawal
+    let currentWithdrawal = null;
+    
+    // Load withdrawal details
+    function loadWithdrawalDetails() {
+        withdrawalLoading.classList.remove('hidden');
+        withdrawalContainer.classList.add('hidden');
+        
+        db.collection('withdrawal_requests').doc(withdrawalId).get()
+            .then(doc => {
+                withdrawalLoading.classList.add('hidden');
+                withdrawalContainer.classList.remove('hidden');
+                
+                if (!doc.exists) {
+                    alert('Withdrawal request not found');
+                    window.location.href = "{% url 'admin_dashboard:withdrawal_requests' %}";
+                    return;
+                }
+                
+                // Get withdrawal data
+                const withdrawal = doc.data();
+                withdrawal.id = doc.id;
+                currentWithdrawal = withdrawal;
+                
+                // Render withdrawal details
+                renderWithdrawalDetails(withdrawal);
+            })
+            .catch(error => {
+                console.error('Error loading withdrawal details:', error);
+                withdrawalLoading.classList.add('hidden');
+                alert('Error loading withdrawal details');
+            });
+    }
+    
+    // Render withdrawal details
+    function renderWithdrawalDetails(withdrawal) {
+        // Basic details
+        withdrawalIdEl.textContent = withdrawal.id;
+        withdrawalAmountEl.textContent = `${withdrawal.amount || 'Unknown'} ETB`;
+        
+        // Status with color
+        const statusClass = getStatusColor(withdrawal.status);
+        withdrawalStatusEl.textContent = withdrawal.status || 'Unknown';
+        withdrawalStatusEl.className = statusClass;
+        
+        // Format dates
+        let createdDate = 'Unknown date';
+        let updatedDate = 'Not available';
+        
+        if (withdrawal.createdAt && withdrawal.createdAt.toDate) {
+            createdDate = withdrawal.createdAt.toDate().toLocaleString();
+        } else if (withdrawal.createdAt && withdrawal.createdAt.seconds) {
+            createdDate = new Date(withdrawal.createdAt.seconds * 1000).toLocaleString();
+        }
+        
+        if (withdrawal.updatedAt && withdrawal.updatedAt.toDate) {
+            updatedDate = withdrawal.updatedAt.toDate().toLocaleString();
+        } else if (withdrawal.updatedAt && withdrawal.updatedAt.seconds) {
+            updatedDate = new Date(withdrawal.updatedAt.seconds * 1000).toLocaleString();
+        }
+        
+        withdrawalCreatedEl.textContent = createdDate;
+        withdrawalUpdatedEl.textContent = updatedDate;
+        
+        // Bank details
+        let accountNumber = 'Not provided';
+        let fullName = 'Not provided';
+        let phoneNumber = 'Not provided';
+        let method = 'Not specified';
+        
+        if (withdrawal.bankDetails) {
+            accountNumber = withdrawal.bankDetails.accountNumber || accountNumber;
+            fullName = withdrawal.bankDetails.fullName || withdrawal.bankDetails.accountName || fullName;
+            phoneNumber = withdrawal.bankDetails.phoneNumber || phoneNumber;
+        }
+        
+        if (withdrawal.encryptedDetails) {
+            method = withdrawal.encryptedDetails.method || method;
+        }
+        
+        withdrawalMethodEl.textContent = method.toUpperCase();
+        withdrawalAccountEl.textContent = accountNumber;
+        withdrawalNameEl.textContent = fullName;
+        withdrawalPhoneEl.textContent = phoneNumber || 'Not provided';
+        
+        // Notes
+        let notes = withdrawal.notes || 'No notes provided';
+        let processingNotes = withdrawal.processingNotes || '';
+        
+        if (withdrawal.encryptedDetails) {
+            notes = withdrawal.encryptedDetails.notes || notes;
+            processingNotes = withdrawal.encryptedDetails.processingNotes || processingNotes;
+        }
+        
+        withdrawalNotesEl.textContent = notes;
+        
+        if (processingNotes) {
+            withdrawalProcessingNotesEl.textContent = processingNotes;
+            processingNotesContainer.classList.remove('hidden');
+        }
+        
+        // Rejection reason
+        if (withdrawal.status === 'rejected' && withdrawal.rejectionReason) {
+            withdrawalRejectionReasonEl.textContent = withdrawal.rejectionReason;
+            rejectionReasonContainer.classList.remove('hidden');
+        }
+        
+        // User information
+        userIdEl.textContent = withdrawal.userId || 'Unknown';
+        viewUserLink.href = `/users/${withdrawal.userId}/`;
+        
+        // Show actions if pending
+        if (withdrawal.status && withdrawal.status.toLowerCase() === 'pending') {
+            actionsContainer.classList.remove('hidden');
+        }
+        
+        // Set up approve modal data
+        approveAmount.textContent = `${withdrawal.amount || 'Unknown'} ETB`;
+        approveUser.textContent = withdrawal.userId ? withdrawal.userId.substring(0, 8) + '...' : 'Unknown';
+        approveBank.textContent = method.toUpperCase();
+        approveAccount.textContent = accountNumber;
+    }
+    
+    // Process withdrawal approval
+    function approveWithdrawal() {
+        if (!currentWithdrawal) return;
+        
+        // Show loading
+        approveConfirm.disabled = true;
+        approveConfirm.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+        `;
+        
+        // Update withdrawal status in Firestore
+        const withdrawalRef = db.collection('withdrawal_requests').doc(currentWithdrawal.id);
+        withdrawalRef.update({
+            status: 'completed',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            processingNotes: 'Approved by administrator'
+        })
+        .then(() => {
+            // Hide modal
+            approveModal.classList.add('hidden');
+            approveConfirm.disabled = false;
+            approveConfirm.textContent = 'Approve';
+            
+            // Show success message
+            alert('Withdrawal request approved successfully');
+            
+            // Reload withdrawal details
+            loadWithdrawalDetails();
+        })
+        .catch(error => {
+            console.error('Error approving withdrawal:', error);
+            
+            // Hide modal
+            approveModal.classList.add('hidden');
+            approveConfirm.disabled = false;
+            approveConfirm.textContent = 'Approve';
+            
+            // Show error message
+            alert(`Error approving withdrawal: ${error.message}`);
+        });
+    }
+    
+    // Process withdrawal rejection
+    function rejectWithdrawal() {
+        if (!currentWithdrawal) return;
+        
+        // Get reason
+        let reason = rejectReason.value;
+        if (reason === 'other') {
+            reason = otherReason.value.trim();
+            if (!reason) {
+                alert('Please specify a reason for rejection');
+                return;
+            }
+        } else {
+            // Convert reason code to readable text
+            if (reason === 'inaccurate_information') {
+                reason = 'Inaccurate Information';
+            } else if (reason === 'not_eligible') {
+                reason = 'Not Eligible';
+            } else if (reason === 'suspicious_activity') {
+                reason = 'Suspicious Activity';
+            } else if (reason === 'insufficient_funds') {
+                reason = 'Insufficient Funds';
+            }
+        }
+        
+        // Show loading
+        rejectConfirm.disabled = true;
+        rejectConfirm.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+        `;
+        
+        // Get user wallet
+        const userId = currentWithdrawal.userId;
+        const walletRef = db.collection('wallets').where('userId', '==', userId);
+        
+        walletRef.get()
+            .then(snapshot => {
+                if (snapshot.empty) {
+                    throw new Error('User wallet not found');
+                }
+                
+                // Get the first wallet document
+                const walletDoc = snapshot.docs[0];
+                const wallet = walletDoc.data();
+                const currentBalance = parseFloat(wallet.balance || 0);
+                const refundAmount = parseFloat(currentWithdrawal.amount || 0);
+                
+                // Update wallet balance
+                return db.collection('wallets').doc(walletDoc.id).update({
+                    balance: currentBalance + refundAmount,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            })
+            .then(() => {
+                // Update withdrawal status
+                return db.collection('withdrawal_requests').doc(currentWithdrawal.id).update({
+                    status: 'rejected',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    processingNotes: `Rejected: ${reason}`,
+                    rejectionReason: reason
+                });
+            })
+            .then(() => {
+                // Hide modal
+                rejectModal.classList.add('hidden');
+                rejectConfirm.disabled = false;
+                rejectConfirm.textContent = 'Reject';
+                
+                // Show success message
+                alert('Withdrawal request rejected and funds returned to user wallet');
+                
+                // Reload withdrawal details
+                loadWithdrawalDetails();
+            })
+            .catch(error => {
+                console.error('Error rejecting withdrawal:', error);
+                
+                // Hide modal
+                rejectModal.classList.add('hidden');
+                rejectConfirm.disabled = false;
+                rejectConfirm.textContent = 'Reject';
+                
+                // Show error message
+                alert(`Error rejecting withdrawal: ${error.message}`);
+            });
+    }
+    
+    // Helper function to get status color
+    function getStatusColor(status) {
+        if (!status) return 'text-gray-600';
+        
+        switch(status.toLowerCase()) {
+            case 'pending':
+                return 'text-yellow-600 font-medium';
+            case 'completed':
+            case 'success':
+                return 'text-green-600 font-medium';
+            case 'rejected':
+                return 'text-red-600 font-medium';
+            case 'failed':
+                return 'text-red-600 font-medium';
+            default:
+                return 'text-gray-600';
+        }
+    }
+    
+    // Show approve modal
+    function showApproveModal() {
+        approveModal.classList.remove('hidden');
+    }
+    
+    // Show reject modal
+    function showRejectModal() {
+        rejectModal.classList.remove('hidden');
+    }
+    
+    // Event listeners
+    approveBtn.addEventListener('click', showApproveModal);
+    rejectBtn.addEventListener('click', showRejectModal);
+    
+    approveCancel.addEventListener('click', () => {
+        approveModal.classList.add('hidden');
+    });
+    
+    approveConfirm.addEventListener('click', approveWithdrawal);
+    
+    rejectCancel.addEventListener('click', () => {
+        rejectModal.classList.add('hidden');
+    });
+    
+    rejectConfirm.addEventListener('click', rejectWithdrawal);
+    
+    rejectReason.addEventListener('change', () => {
+        if (rejectReason.value === 'other') {
+            otherReasonContainer.classList.remove('hidden');
+        } else {
+            otherReasonContainer.classList.add('hidden');
+        }
+    });
+    
+    // Load withdrawal details on page load
+    loadWithdrawalDetails();
+});
+</script>
+{% endblock %}
