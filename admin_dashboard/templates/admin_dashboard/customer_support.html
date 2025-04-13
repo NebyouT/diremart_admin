@@ -1,12 +1,12 @@
 {% extends 'admin_dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Customer Support{% endblock %}
+{% block title %}Customer Support Chat{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Customer Support</h1>
+        <h1 class="text-2xl font-bold text-gray-800">Customer Support Chat</h1>
         <a href="{% url 'admin_dashboard:dashboard' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -15,16 +15,16 @@
         </a>
     </div>
 
-    <div id="support-loading" class="flex justify-center items-center py-8">
+    <div id="chat-loading" class="flex justify-center items-center py-8">
         <svg class="animate-spin h-10 w-10 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span class="ml-3 text-lg text-gray-600">Loading support tickets...</span>
+        <span class="ml-3 text-lg text-gray-600">Loading customer chats...</span>
     </div>
 
-    <div id="support-container" class="hidden">
-        <!-- Filters -->
+    <div id="chat-container" class="hidden">
+        <!-- Filters and Controls -->
         <div class="mb-6 bg-white p-4 rounded-lg shadow-md">
             <div class="flex flex-wrap gap-4 items-center">
                 <div>
@@ -32,19 +32,15 @@
                     <select id="status-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                         <option value="all">All</option>
                         <option value="open">Open</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
                         <option value="closed">Closed</option>
                     </select>
                 </div>
                 <div>
-                    <label for="priority-filter" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <select id="priority-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                        <option value="all">All</option>
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
+                    <label for="sort-by" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                    <select id="sort-by" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="unread">Unread First</option>
                     </select>
                 </div>
                 <div class="ml-auto self-end">
@@ -58,526 +54,88 @@
             </div>
         </div>
 
-        <!-- Support Tickets Table -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="support-table-body" class="bg-white divide-y divide-gray-200">
-                        <!-- Support tickets will be inserted here -->
-                    </tbody>
-                </table>
+        <!-- Chat Interface -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Chat List -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-800">Customer Chats</h2>
+                </div>
+                <div id="no-chats-message" class="p-6 text-center hidden">
+                    <p class="text-gray-500">No active chats found.</p>
+                </div>
+                <div id="chat-list" class="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+                    <!-- Chat list items will be inserted here -->
+                </div>
             </div>
-            <div id="no-tickets-message" class="p-6 text-center hidden">
-                <p class="text-gray-500">No support tickets found.</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- View Ticket Modal -->
-<div id="ticket-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white p-6 rounded-lg shadow-lg max-w-4xl w-full max-h-screen overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-800" id="ticket-modal-title">Support Ticket</h3>
-            <button id="ticket-modal-close" class="text-gray-400 hover:text-gray-500">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        
-        <div id="ticket-details" class="mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <p class="text-sm text-gray-500">Customer</p>
-                    <p id="ticket-customer" class="font-medium"></p>
+            <!-- Chat Messages -->
+            <div class="md:col-span-2 bg-white rounded-lg shadow-md overflow-hidden">
+                <div id="no-chat-selected" class="flex flex-col items-center justify-center h-[600px]">
+                    <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-lg">Select a chat to view the conversation</p>
                 </div>
-                <div>
-                    <p class="text-sm text-gray-500">Email</p>
-                    <p id="ticket-email" class="font-medium"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Status</p>
-                    <p id="ticket-status" class="font-medium"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Priority</p>
-                    <p id="ticket-priority" class="font-medium"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Created</p>
-                    <p id="ticket-created" class="font-medium"></p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500">Last Updated</p>
-                    <p id="ticket-updated" class="font-medium"></p>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <p class="text-sm text-gray-500">Subject</p>
-                <p id="ticket-subject" class="font-medium"></p>
-            </div>
-            
-            <div class="mb-6">
-                <p class="text-sm text-gray-500">Description</p>
-                <div id="ticket-description" class="bg-gray-50 p-3 rounded-lg mt-1"></div>
-            </div>
-        </div>
-        
-        <div id="ticket-conversation" class="mb-6">
-            <h4 class="text-md font-semibold mb-3">Conversation</h4>
-            <div id="conversation-messages" class="space-y-4">
-                <!-- Messages will be inserted here -->
-            </div>
-        </div>
-        
-        <div id="ticket-reply" class="mb-4">
-            <h4 class="text-md font-semibold mb-2">Reply</h4>
-            <textarea id="reply-message" rows="4" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Type your reply here..."></textarea>
-        </div>
-        
-        <div class="flex justify-between">
-            <div>
-                <label for="status-update" class="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
-                <select id="status-update" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    <option value="open">Open</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                </select>
-            </div>
-            <div class="flex space-x-3 items-end">
-                <button id="ticket-cancel" class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">Cancel</button>
-                <button id="ticket-submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium">Send Reply</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Elements
-    const supportLoading = document.getElementById('support-loading');
-    const supportContainer = document.getElementById('support-container');
-    const supportTableBody = document.getElementById('support-table-body');
-    const noTicketsMessage = document.getElementById('no-tickets-message');
-    const statusFilter = document.getElementById('status-filter');
-    const priorityFilter = document.getElementById('priority-filter');
-    const refreshBtn = document.getElementById('refresh-btn');
-    
-    // Modal elements
-    const ticketModal = document.getElementById('ticket-modal');
-    const ticketModalTitle = document.getElementById('ticket-modal-title');
-    const ticketModalClose = document.getElementById('ticket-modal-close');
-    const ticketCustomer = document.getElementById('ticket-customer');
-    const ticketEmail = document.getElementById('ticket-email');
-    const ticketStatus = document.getElementById('ticket-status');
-    const ticketPriority = document.getElementById('ticket-priority');
-    const ticketCreated = document.getElementById('ticket-created');
-    const ticketUpdated = document.getElementById('ticket-updated');
-    const ticketSubject = document.getElementById('ticket-subject');
-    const ticketDescription = document.getElementById('ticket-description');
-    const conversationMessages = document.getElementById('conversation-messages');
-    const replyMessage = document.getElementById('reply-message');
-    const statusUpdate = document.getElementById('status-update');
-    const ticketCancel = document.getElementById('ticket-cancel');
-    const ticketSubmit = document.getElementById('ticket-submit');
-    
-    // Variables
-    let allSupportTickets = [];
-    let currentTicket = null;
-    
-    // Load support tickets
-    function loadSupportTickets() {
-        supportLoading.classList.remove('hidden');
-        supportContainer.classList.add('hidden');
-        noTicketsMessage.classList.add('hidden');
-        
-        // Get filter values
-        const statusValue = statusFilter.value;
-        const priorityValue = priorityFilter.value;
-        
-        // Reference to the support_tickets collection
-        db.collection('support_tickets')
-            .orderBy('createdAt', 'desc')
-            .get()
-            .then(snapshot => {
-                supportLoading.classList.add('hidden');
-                supportContainer.classList.remove('hidden');
                 
-                allSupportTickets = [];
-                snapshot.forEach(doc => {
-                    const ticket = {
-                        id: doc.id,
-                        ...doc.data()
-                    };
-                    allSupportTickets.push(ticket);
-                });
-                
-                // Apply filters
-                let filteredTickets = allSupportTickets;
-                
-                if (statusValue !== 'all') {
-                    filteredTickets = filteredTickets.filter(ticket => 
-                        ticket.status && ticket.status.toLowerCase() === statusValue);
-                }
-                
-                if (priorityValue !== 'all') {
-                    filteredTickets = filteredTickets.filter(ticket => 
-                        ticket.priority && ticket.priority.toLowerCase() === priorityValue);
-                }
-                
-                // Display tickets
-                renderSupportTickets(filteredTickets);
-            })
-            .catch(error => {
-                console.error('Error loading support tickets:', error);
-                supportLoading.classList.add('hidden');
-                supportContainer.classList.remove('hidden');
-                
-                // Show error message
-                alert(`Error loading support tickets: ${error.message}`);
-            });
-    }
-    
-    // Render support tickets
-    function renderSupportTickets(tickets) {
-        supportTableBody.innerHTML = '';
-        
-        if (tickets.length === 0) {
-            noTicketsMessage.classList.remove('hidden');
-            return;
-        }
-        
-        noTicketsMessage.classList.add('hidden');
-        
-        tickets.forEach(ticket => {
-            const row = document.createElement('tr');
-            
-            // Format date
-            const createdDate = ticket.createdAt ? new Date(ticket.createdAt.seconds * 1000) : new Date();
-            const formattedDate = createdDate.toLocaleDateString() + ' ' + createdDate.toLocaleTimeString();
-            
-            // Get status badge color
-            const statusBadgeColor = getStatusBadgeColor(ticket.status);
-            
-            // Get priority badge color
-            const priorityBadgeColor = getPriorityBadgeColor(ticket.priority);
-            
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${ticket.id.substring(0, 8)}...</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ticket.customerName || 'Unknown'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ticket.subject || 'No subject'}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadgeColor}">
-                        ${ticket.status || 'Unknown'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityBadgeColor}">
-                        ${ticket.priority || 'Unknown'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formattedDate}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button class="view-ticket-btn text-blue-600 hover:text-blue-900 mr-3" data-id="${ticket.id}">View</button>
-                </td>
-            `;
-            
-            supportTableBody.appendChild(row);
-        });
-        
-        // Add event listeners to view buttons
-        document.querySelectorAll('.view-ticket-btn').forEach(button => {
-            button.addEventListener('click', () => {
-                const ticketId = button.getAttribute('data-id');
-                const ticket = tickets.find(t => t.id === ticketId);
-                if (ticket) {
-                    viewTicket(ticket);
-                }
-            });
-        });
-    }
-    
-    // View ticket details
-    function viewTicket(ticket) {
-        currentTicket = ticket;
-        
-        // Set ticket details
-        ticketModalTitle.textContent = `Ticket #${ticket.id.substring(0, 8)}`;
-        ticketCustomer.textContent = ticket.customerName || 'Unknown';
-        ticketEmail.textContent = ticket.customerEmail || 'Unknown';
-        
-        // Set status with badge
-        const statusBadge = document.createElement('span');
-        statusBadge.className = `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(ticket.status)}`;
-        statusBadge.textContent = ticket.status || 'Unknown';
-        ticketStatus.innerHTML = '';
-        ticketStatus.appendChild(statusBadge);
-        
-        // Set priority with badge
-        const priorityBadge = document.createElement('span');
-        priorityBadge.className = `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeColor(ticket.priority)}`;
-        priorityBadge.textContent = ticket.priority || 'Unknown';
-        ticketPriority.innerHTML = '';
-        ticketPriority.appendChild(priorityBadge);
-        
-        // Format dates
-        const createdDate = ticket.createdAt ? new Date(ticket.createdAt.seconds * 1000) : new Date();
-        ticketCreated.textContent = createdDate.toLocaleDateString() + ' ' + createdDate.toLocaleTimeString();
-        
-        const updatedDate = ticket.updatedAt ? new Date(ticket.updatedAt.seconds * 1000) : createdDate;
-        ticketUpdated.textContent = updatedDate.toLocaleDateString() + ' ' + updatedDate.toLocaleTimeString();
-        
-        ticketSubject.textContent = ticket.subject || 'No subject';
-        ticketDescription.textContent = ticket.description || 'No description';
-        
-        // Set current status in dropdown
-        statusUpdate.value = ticket.status || 'open';
-        
-        // Load conversation
-        loadConversation(ticket.id);
-        
-        // Show modal
-        ticketModal.classList.remove('hidden');
-    }
-    
-    // Load conversation for a ticket
-    function loadConversation(ticketId) {
-        conversationMessages.innerHTML = '';
-        
-        // Add loading indicator
-        const loading = document.createElement('div');
-        loading.className = 'flex justify-center items-center py-4';
-        loading.innerHTML = `
-            <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="ml-2 text-sm text-gray-600">Loading conversation...</span>
-        `;
-        conversationMessages.appendChild(loading);
-        
-        // Get messages for this ticket
-        db.collection('support_messages')
-            .where('ticketId', '==', ticketId)
-            .orderBy('timestamp', 'asc')
-            .get()
-            .then(snapshot => {
-                conversationMessages.innerHTML = '';
-                
-                if (snapshot.empty) {
-                    const noMessages = document.createElement('div');
-                    noMessages.className = 'text-center text-gray-500 py-4';
-                    noMessages.textContent = 'No messages yet.';
-                    conversationMessages.appendChild(noMessages);
-                    return;
-                }
-                
-                snapshot.forEach(doc => {
-                    const message = doc.data();
-                    const messageElement = document.createElement('div');
-                    
-                    // Determine if message is from customer or admin
-                    const isCustomer = message.sender === 'customer';
-                    
-                    messageElement.className = `p-3 rounded-lg ${isCustomer ? 'bg-gray-100' : 'bg-blue-100 ml-8'}`;
-                    
-                    // Format date
-                    const messageDate = message.timestamp ? new Date(message.timestamp.seconds * 1000) : new Date();
-                    const formattedDate = messageDate.toLocaleDateString() + ' ' + messageDate.toLocaleTimeString();
-                    
-                    messageElement.innerHTML = `
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="font-medium text-sm">${isCustomer ? 'Customer' : 'Admin'}</span>
-                            <span class="text-xs text-gray-500">${formattedDate}</span>
+                <div id="chat-conversation" class="hidden flex flex-col h-[600px]">
+                    <!-- Chat Header -->
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <div>
+                            <h2 id="chat-customer-name" class="text-lg font-semibold text-gray-800"></h2>
+                            <p id="chat-customer-email" class="text-sm text-gray-500"></p>
                         </div>
-                        <p class="text-sm">${message.content}</p>
-                    `;
+                        <div class="flex items-center">
+                            <span id="chat-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-medium"></span>
+                            <button id="close-chat-btn" class="ml-3 text-gray-500 hover:text-gray-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                     
-                    conversationMessages.appendChild(messageElement);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading conversation:', error);
-                conversationMessages.innerHTML = '';
-                
-                const errorElement = document.createElement('div');
-                errorElement.className = 'text-center text-red-500 py-4';
-                errorElement.textContent = `Error loading conversation: ${error.message}`;
-                conversationMessages.appendChild(errorElement);
-            });
-    }
-    
-    // Submit reply
-    function submitReply() {
-        if (!currentTicket) return;
-        
-        const message = replyMessage.value.trim();
-        if (!message) {
-            alert('Please enter a reply message');
-            return;
-        }
-        
-        const newStatus = statusUpdate.value;
-        
-        // Disable submit button
-        ticketSubmit.disabled = true;
-        ticketSubmit.textContent = 'Sending...';
-        
-        // Add message to support_messages collection
-        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
-        
-        db.collection('support_messages').add({
-            ticketId: currentTicket.id,
-            content: message,
-            sender: 'admin',
-            timestamp: timestamp
-        })
-        .then(() => {
-            // Update ticket status if changed
-            if (newStatus !== currentTicket.status) {
-                return db.collection('support_tickets').doc(currentTicket.id).update({
-                    status: newStatus,
-                    updatedAt: timestamp
-                });
-            }
-            return Promise.resolve();
-        })
-        .then(() => {
-            // Clear reply field
-            replyMessage.value = '';
-            
-            // Reload conversation
-            loadConversation(currentTicket.id);
-            
-            // Update ticket in local data
-            const index = allSupportTickets.findIndex(t => t.id === currentTicket.id);
-            if (index !== -1) {
-                allSupportTickets[index].status = newStatus;
-                allSupportTickets[index].updatedAt = { seconds: Math.floor(Date.now() / 1000) };
-            }
-            
-            // Re-render tickets
-            renderSupportTickets(allSupportTickets);
-            
-            // Enable submit button
-            ticketSubmit.disabled = false;
-            ticketSubmit.textContent = 'Send Reply';
-            
-            // Show success message
-            showNotification('Reply sent successfully', 'success');
-        })
-        .catch(error => {
-            console.error('Error sending reply:', error);
-            
-            // Enable submit button
-            ticketSubmit.disabled = false;
-            ticketSubmit.textContent = 'Send Reply';
-            
-            // Show error message
-            showNotification(`Error sending reply: ${error.message}`, 'error');
-        });
-    }
-    
-    // Helper functions
-    function getStatusBadgeColor(status) {
-        if (!status) return 'bg-gray-100 text-gray-800';
-        
-        switch(status.toLowerCase()) {
-            case 'open':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'in-progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'resolved':
-                return 'bg-green-100 text-green-800';
-            case 'closed':
-                return 'bg-gray-100 text-gray-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    }
-    
-    function getPriorityBadgeColor(priority) {
-        if (!priority) return 'bg-gray-100 text-gray-800';
-        
-        switch(priority.toLowerCase()) {
-            case 'low':
-                return 'bg-green-100 text-green-800';
-            case 'medium':
-                return 'bg-blue-100 text-blue-800';
-            case 'high':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'urgent':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    }
-    
-    // Show notification
-    function showNotification(message, type) {
-        const notificationContainer = document.createElement('div');
-        let bgColor = 'bg-green-500';
-        
-        if (type === 'error') {
-            bgColor = 'bg-red-500';
-        } else if (type === 'info') {
-            bgColor = 'bg-blue-500';
-        }
-        
-        notificationContainer.className = `fixed top-4 right-4 z-50 ${bgColor} text-white px-4 py-2 rounded shadow-lg flex items-center`;
-        
-        notificationContainer.innerHTML = `
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                ${type === 'error' 
-                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
-                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-                }
-            </svg>
-            <span>${message}</span>
-        `;
-        
-        document.body.appendChild(notificationContainer);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            notificationContainer.remove();
-        }, 5000);
-    }
-    
-    // Event listeners
-    refreshBtn.addEventListener('click', loadSupportTickets);
-    statusFilter.addEventListener('change', loadSupportTickets);
-    priorityFilter.addEventListener('change', loadSupportTickets);
-    
-    // Modal event listeners
-    ticketModalClose.addEventListener('click', () => {
-        ticketModal.classList.add('hidden');
-        currentTicket = null;
-    });
-    
-    ticketCancel.addEventListener('click', () => {
-        ticketModal.classList.add('hidden');
-        currentTicket = null;
-    });
-    
-    ticketSubmit.addEventListener('click', submitReply);
-    
-    // Load support tickets on page load
-    loadSupportTickets();
-});
-</script>
+                    <!-- Chat Messages -->
+                    <div id="chat-messages" class="flex-grow p-4 overflow-y-auto bg-gray-50">
+                        <!-- Messages will be inserted here -->
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="p-4 border-t border-gray-200">
+                        <div class="flex items-end gap-2">
+                            <div class="flex-grow">
+                                <textarea id="message-input" rows="2" class="w-full p-2.5 text-sm text-gray-900 bg-white rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500" placeholder="Type your message..."></textarea>
+                            </div>
+                            <button id="send-message-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2.5 px-5 rounded-lg text-sm font-medium flex-shrink-0 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                Send
+                            </button>
+                        </div>
+                        <div class="flex justify-between mt-3">
+                            <div>
+                                <label for="chat-status-update" class="block text-sm font-medium text-gray-700 mb-1">Update Status</label>
+                                <select id="chat-status-update" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2">
+                                    <option value="open">Open</option>
+                                    <option value="closed">Closed</option>
+                                </select>
+                            </div>
+                            <button id="update-status-btn" class="self-end bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg text-sm font-medium">
+                                Update Status
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="{% static 'js/customer_chat.js' %}"></script>
+<script src="{% static 'js/test_chat_data.js' %}"></script>
 {% endblock %}
