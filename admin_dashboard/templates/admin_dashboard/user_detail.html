@@ -74,6 +74,10 @@
                                 <p class="text-sm text-gray-500">Email Verified</p>
                                 <p id="user-email-verified" class="font-medium"></p>
                             </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Wallet Balance</p>
+                                <p id="user-wallet-balance" class="font-medium text-green-600"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -307,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const userId = '{{ user_id }}';
     let userData = null;
     
-    // Load user data
+    // Load user data with complete profile information
     function loadUserData() {
         // Show loading
         userLoading.classList.remove('hidden');
@@ -316,30 +320,70 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Get the user data directly from Firestore
         const db = firebase.firestore();
+        
+        // First, get the user document
         db.collection('users').doc(userId).get()
             .then(doc => {
                 if (doc.exists) {
+                    // Get basic user data
                     const data = doc.data();
                     data.uid = doc.id; // Add the document ID as uid
                     userData = data;
-                    renderUserDetails(data);
-                    loadUserOrders();
-                    loadUserTransactions();
                     
-                    // If user is a seller, load their products
-                    if (data.role === 'seller') {
-                        userProductsSection.classList.remove('hidden');
-                        loadUserProducts();
-                    }
-                    
-                    // Dispatch event that user data is loaded
-                    document.dispatchEvent(new Event('userDataLoaded'));
+                    // Get additional user profile data if it exists
+                    return db.collection('userProfiles').doc(userId).get()
+                        .then(profileDoc => {
+                            // Merge profile data with user data if available
+                            if (profileDoc.exists) {
+                                Object.assign(data, profileDoc.data());
+                            }
+                            return data;
+                        });
                 } else {
                     throw new Error('User not found');
                 }
             })
+            .then(enhancedUserData => {
+                // Get authentication metadata from auth collection if available
+                return db.collection('authMetadata').doc(userId).get()
+                    .then(authDoc => {
+                        if (authDoc.exists) {
+                            enhancedUserData.metadata = authDoc.data();
+                        }
+                        return enhancedUserData;
+                    });
+            })
+            .then(completeUserData => {
+                // Get wallet information if available
+                return db.collection('wallets').doc(userId).get()
+                    .then(walletDoc => {
+                        if (walletDoc.exists) {
+                            completeUserData.wallet = walletDoc.data();
+                        }
+                        return completeUserData;
+                    });
+            })
+            .then(finalUserData => {
+                // Render the complete user data
+                userData = finalUserData;
+                renderUserDetails(finalUserData);
+                
+                // Load related data
+                loadUserOrders();
+                loadUserTransactions();
+                loadWithdrawalRequests();
+                
+                // If user is a seller, load their products
+                if (finalUserData.role === 'seller') {
+                    userProductsSection.classList.remove('hidden');
+                    loadUserProducts();
+                }
+                
+                // Dispatch event that user data is loaded
+                document.dispatchEvent(new Event('userDataLoaded'));
+            })
             .catch(error => {
-                console.error('Error loading user:', error);
+                console.error('Error loading user data:', error);
                 userLoading.classList.add('hidden');
                 noUserMessage.classList.remove('hidden');
             });
@@ -351,26 +395,86 @@ document.addEventListener('DOMContentLoaded', function() {
         userLoading.classList.add('hidden');
         userDetailContainer.classList.remove('hidden');
         
-        // Set user details
+        console.log('Rendering user details:', user);
+        
+        // Set basic user details
         userIdEl.textContent = user.uid || 'N/A';
-        userNameEl.textContent = user.displayName || 'N/A';
+        userNameEl.textContent = user.displayName || user.fullName || user.name || 'N/A';
         userEmailEl.textContent = user.email || 'N/A';
-        userPhoneEl.textContent = user.phoneNumber || 'N/A';
-        userRoleEl.textContent = (user.role || 'buyer').charAt(0).toUpperCase() + (user.role || 'buyer').slice(1);
+        userPhoneEl.textContent = user.phoneNumber || user.phone || 'N/A';
         
-        // Format dates
-        const createdDate = user.metadata?.creationTime ? new Date(user.metadata.creationTime) : null;
-        const lastSignInDate = user.metadata?.lastSignInTime ? new Date(user.metadata.lastSignInTime) : null;
+        // Format role with proper capitalization
+        const role = user.role || 'buyer';
+        userRoleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
         
-        userCreatedEl.textContent = createdDate ? createdDate.toLocaleString() : 'N/A';
-        userLastSignInEl.textContent = lastSignInDate ? lastSignInDate.toLocaleString() : 'N/A';
+        // Format dates with proper locale formatting
+        let createdDate = null;
+        let lastSignInDate = null;
         
-        // Other account details
-        userProviderEl.textContent = (user.providerData && user.providerData.length > 0) 
-            ? user.providerData[0].providerId.replace('.com', '') 
-            : 'N/A';
+        // Try several possible date formats/locations
+        if (user.metadata?.creationTime) {
+            createdDate = new Date(user.metadata.creationTime);
+        } else if (user.createdAt) {
+            // Handle Firestore Timestamp object
+            if (user.createdAt.toDate) {
+                createdDate = user.createdAt.toDate();
+            } else {
+                createdDate = new Date(user.createdAt);
+            }
+        } else if (user.created) {
+            createdDate = new Date(user.created);
+        }
         
-        userEmailVerifiedEl.textContent = user.emailVerified ? 'Yes' : 'No';
+        if (user.metadata?.lastSignInTime) {
+            lastSignInDate = new Date(user.metadata.lastSignInTime);
+        } else if (user.lastLogin || user.lastSignIn) {
+            // Handle Firestore Timestamp object
+            const lastLoginData = user.lastLogin || user.lastSignIn;
+            if (lastLoginData?.toDate) {
+                lastSignInDate = lastLoginData.toDate();
+            } else {
+                lastSignInDate = new Date(lastLoginData);
+            }
+        }
+        
+        // Format dates using locale
+        const dateOptions = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        
+        userCreatedEl.textContent = createdDate ? createdDate.toLocaleString(undefined, dateOptions) : 'N/A';
+        userLastSignInEl.textContent = lastSignInDate ? lastSignInDate.toLocaleString(undefined, dateOptions) : 'N/A';
+        
+        // Provider information
+        if (user.providerData && user.providerData.length > 0) {
+            const provider = user.providerData[0].providerId || '';
+            userProviderEl.textContent = provider.replace('.com', '').replace('password', 'Email/Password');
+        } else if (user.provider) {
+            userProviderEl.textContent = user.provider.replace('.com', '').replace('password', 'Email/Password');
+        } else {
+            userProviderEl.textContent = 'Email/Password';
+        }
+        
+        // Email verification status
+        if (user.emailVerified !== undefined) {
+            userEmailVerifiedEl.textContent = user.emailVerified ? 'Yes' : 'No';
+        } else {
+            userEmailVerifiedEl.textContent = 'No';
+        }
+        
+        // Add wallet balance if available
+        if (user.wallet) {
+            const balanceElement = document.getElementById('user-wallet-balance');
+            if (balanceElement) {
+                const balance = user.wallet.balance || 0;
+                balanceElement.textContent = new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB' }).format(balance);
+            }
+        }
         
         // Show/hide appropriate action buttons
         if (user.disabled) {
@@ -1184,30 +1288,60 @@ document.addEventListener('DOMContentLoaded', function() {
         userTransactionsLoading.classList.remove('hidden');
         userTransactionsContainer.classList.add('hidden');
         
-        // Get transactions for this user - without requiring composite index
-        db.collection('transactions')
+        // Create an array to collect transactions from multiple sources
+        let allTransactions = [];
+        
+        // Promise for getting transactions where user is the owner
+        const ownerTransactionsPromise = db.collection('transactions')
             .where('userId', '==', userId)
             .get()
             .then(snapshot => {
-                // Process results and sort client-side
-                return {
-                    empty: snapshot.empty,
-                    docs: snapshot.empty ? [] : snapshot.docs
-                        .map(doc => {
-                            const data = doc.data();
-                            data.id = doc.id;
-                            return data;
-                        })
-                        .sort((a, b) => {
-                            // Sort by timestamp descending
-                            const timeA = a.timestamp?.seconds || 0;
-                            const timeB = b.timestamp?.seconds || 0;
-                            return timeB - timeA;
-                        })
-                        .slice(0, 5) // Limit to 5 results
-                };
+                if (!snapshot.empty) {
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        data.id = doc.id;
+                        data.transactionRole = 'owner';
+                        allTransactions.push(data);
+                    });
+                }
             })
-            .then(result => {
+            .catch(error => console.error('Error loading owner transactions:', error));
+            
+        // Promise for getting transactions where user is the recipient
+        const recipientTransactionsPromise = db.collection('transactions')
+            .where('recipientId', '==', userId)
+            .get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        data.id = doc.id;
+                        data.transactionRole = 'recipient';
+                        allTransactions.push(data);
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading recipient transactions:', error));
+            
+        // Check for wallet transactions if wallet subcollection exists
+        const walletTransactionsPromise = db.collection('wallets').doc(userId)
+            .collection('transactions')
+            .get()
+            .then(snapshot => {
+                if (!snapshot.empty) {
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        data.id = doc.id;
+                        data.transactionRole = 'wallet';
+                        allTransactions.push(data);
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading wallet transactions:', error));
+            
+        // Wait for all promises to complete
+        Promise.all([ownerTransactionsPromise, recipientTransactionsPromise, walletTransactionsPromise])
+            .then(() => {
                 // Hide loading
                 userTransactionsLoading.classList.add('hidden');
                 userTransactionsContainer.classList.remove('hidden');
@@ -1215,15 +1349,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Clear previous transactions
                 userTransactionsList.innerHTML = '';
                 
-                if (result.empty || result.docs.length === 0) {
+                if (allTransactions.length === 0) {
                     noTransactionsMessage.classList.remove('hidden');
                     return;
                 }
                 
+                // Sort transactions by timestamp (newest first)
+                allTransactions.sort((a, b) => {
+                    // Handle potential timestamp formats
+                    let timeA, timeB;
+                    
+                    if (a.timestamp?.seconds) {
+                        timeA = a.timestamp.seconds;
+                    } else if (a.timestamp?.toDate) {
+                        timeA = a.timestamp.toDate().getTime() / 1000;
+                    } else if (a.timestamp) {
+                        timeA = new Date(a.timestamp).getTime() / 1000;
+                    } else if (a.date?.seconds) {
+                        timeA = a.date.seconds;
+                    } else if (a.date) {
+                        timeA = new Date(a.date).getTime() / 1000;
+                    } else {
+                        timeA = 0;
+                    }
+                    
+                    if (b.timestamp?.seconds) {
+                        timeB = b.timestamp.seconds;
+                    } else if (b.timestamp?.toDate) {
+                        timeB = b.timestamp.toDate().getTime() / 1000;
+                    } else if (b.timestamp) {
+                        timeB = new Date(b.timestamp).getTime() / 1000;
+                    } else if (b.date?.seconds) {
+                        timeB = b.date.seconds;
+                    } else if (b.date) {
+                        timeB = new Date(b.date).getTime() / 1000;
+                    } else {
+                        timeB = 0;
+                    }
+                    
+                    return timeB - timeA; // Descending order
+                });
+                
+                // Limit to 10 most recent transactions
+                const recentTransactions = allTransactions.slice(0, 10);
+                
                 // Render transactions
-                result.docs.forEach(transaction => {
+                recentTransactions.forEach(transaction => {
                     renderTransactionItem(transaction, userTransactionsList);
                 });
+            })
+            .catch(error => {
+                console.error('Error processing transactions:', error);
+                userTransactionsLoading.classList.add('hidden');
+                noTransactionsMessage.classList.remove('hidden');
+            });
             })
             .catch(error => {
                 console.error('Error loading transactions:', error);
