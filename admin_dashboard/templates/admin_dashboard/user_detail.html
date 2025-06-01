@@ -1402,51 +1402,120 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error processing transactions:', error);
                 userTransactionsLoading.classList.add('hidden');
                 noTransactionsMessage.classList.remove('hidden');
-            });
-            })
-            .catch(error => {
-                console.error('Error loading transactions:', error);
-                userTransactionsLoading.classList.add('hidden');
-                userTransactionsContainer.classList.remove('hidden');
-                noTransactionsMessage.classList.remove('hidden');
                 noTransactionsMessage.querySelector('p').textContent = 'Error loading transactions.';
             });
     }
-    
+        
     // Render a single transaction item
     function renderTransactionItem(transaction, container) {
         // Format date
-        let transactionDate = 'Unknown date';
-        if (transaction.timestamp && transaction.timestamp.toDate) {
-            transactionDate = transaction.timestamp.toDate().toLocaleString();
-        } else if (transaction.timestamp && transaction.timestamp.seconds) {
-            transactionDate = new Date(transaction.timestamp.seconds * 1000).toLocaleString();
+        let formattedDate = 'Unknown date';
+        if (transaction.timestamp) {
+            if (transaction.timestamp.seconds) {
+                // Firestore timestamp
+                formattedDate = new Date(transaction.timestamp.seconds * 1000).toLocaleString();
+            } else if (transaction.timestamp.toDate) {
+                // Firestore timestamp (alternative format)
+                formattedDate = transaction.timestamp.toDate().toLocaleString();
+            } else {
+                // Regular date string or timestamp
+                formattedDate = new Date(transaction.timestamp).toLocaleString();
+            }
+        } else if (transaction.date) {
+            // Try 'date' field if 'timestamp' doesn't exist
+            if (transaction.date.seconds) {
+                formattedDate = new Date(transaction.date.seconds * 1000).toLocaleString();
+            } else if (transaction.date.toDate) {
+                formattedDate = transaction.date.toDate().toLocaleString();
+            } else {
+                formattedDate = new Date(transaction.date).toLocaleString();
+            }
+        } else if (transaction.createdAt) {
+            // Try 'createdAt' as last resort
+            if (transaction.createdAt.seconds) {
+                formattedDate = new Date(transaction.createdAt.seconds * 1000).toLocaleString();
+            } else if (transaction.createdAt.toDate) {
+                formattedDate = transaction.createdAt.toDate().toLocaleString();
+            } else {
+                formattedDate = new Date(transaction.createdAt).toLocaleString();
+            }
         }
         
-        // Get transaction type and amount
-        const type = transaction.type || 'unknown';
-        const amount = parseFloat(transaction.amount || 0).toFixed(2);
+        // Create transaction element
+        const transactionEl = document.createElement('div');
+        transactionEl.className = 'p-4 hover:bg-gray-50 border-b border-gray-200';
         
-        // Determine if it's credit or debit
-        const isCredit = type === 'deposit' || type === 'refund' || type === 'payment_received';
-        const amountClass = isCredit ? 'text-green-600' : 'text-red-600';
-        const amountPrefix = isCredit ? '+' : '-';
+        // Format transaction type based on role and type fields
+        let transactionType = transaction.type || 'Transaction';
+        if (transaction.transactionRole) {
+            if (transaction.transactionRole === 'recipient' && transaction.type === 'payment') {
+                transactionType = 'Payment Received';
+            } else if (transaction.transactionRole === 'owner' && transaction.type === 'payment') {
+                transactionType = 'Payment Sent';
+            } else if (transaction.transactionRole === 'wallet') {
+                if (transaction.type === 'deposit') {
+                    transactionType = 'Wallet Deposit';
+                } else if (transaction.type === 'withdrawal') {
+                    transactionType = 'Wallet Withdrawal';
+                } else if (transaction.type === 'transfer') {
+                    transactionType = 'Wallet Transfer';
+                } else {
+                    transactionType = 'Wallet ' + (transaction.type || 'Transaction');
+                }
+            }
+        } else if (transaction.type) {
+            // Capitalize and format type if no role info
+            transactionType = transaction.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
         
-        // Create transaction item element
-        const transactionItem = document.createElement('div');
-        transactionItem.className = 'p-4 hover:bg-gray-50';
+        // Format amount with proper sign and currency
+        let amountText = 'N/A';
+        let amountClass = 'font-medium';
         
-        // Set transaction item content
-        transactionItem.innerHTML = `
+        if (transaction.amount !== undefined) {
+            // Format as currency
+            const amount = Number(transaction.amount);
+            let prefix = '';
+            
+            // Add + or - sign based on transaction type/direction
+            if (transaction.transactionRole === 'recipient' || 
+                transaction.type === 'deposit' || 
+                transaction.direction === 'in') {
+                prefix = '+';
+                amountClass += ' text-green-600';
+            } else if ((transaction.transactionRole === 'owner' && transaction.type !== 'refund') || 
+                     transaction.type === 'withdrawal' || 
+                     transaction.direction === 'out') {
+                prefix = '-';
+                amountClass += ' text-red-600';
+            }
+            
+            amountText = prefix + new Intl.NumberFormat('en-ET', {
+                style: 'currency',
+                currency: transaction.currency || 'ETB'
+            }).format(Math.abs(amount));
+        }
+        
+        // Get status class for badge
+        const statusClass = getTransactionStatusColor(transaction.status);
+        
+        // Get description or reference if available
+        const description = transaction.description || transaction.reference || '';
+        const descriptionElement = description ? 
+            `<p class="text-xs text-gray-500 mt-1">${description}</p>` : '';
+        
+        // Build the transaction details HTML
+        transactionEl.innerHTML = `
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-sm font-medium">${transaction.description || type.replace('_', ' ').toUpperCase()}</p>
-                    <p class="text-xs text-gray-500">${transactionDate}</p>
+                    <p class="text-sm font-medium">${transactionType}</p>
+                    <p class="text-xs text-gray-500">${formattedDate}</p>
+                    ${descriptionElement}
                     <p class="text-xs mt-1">${transaction.reference ? 'Ref: ' + transaction.reference : ''}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm font-medium ${amountClass}">${amountPrefix}${amount} ETB</p>
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTransactionStatusColor(transaction.status)}">
+                    <p class="text-sm ${amountClass}">${amountText}</p>
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
                         ${transaction.status || 'completed'}
                     </span>
                 </div>
@@ -1454,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         // Add to container
-        container.appendChild(transactionItem);
+        container.appendChild(transactionEl);
     }
     
     // Get color class for transaction status
